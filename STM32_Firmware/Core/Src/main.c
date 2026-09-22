@@ -1,9 +1,11 @@
 #include "main.h"
 #include "gpio.h"
 #include "i2c.h"
+#include "qmc5883l.h"
 #include "tim.h"
 #include "usart.h"
 #include <mpu6050.h>
+
 
 #include <stdio.h>
 
@@ -25,8 +27,9 @@ int main(void) {
   MX_USART1_UART_Init();
   MX_USART3_UART_Init();
 
-  /* MPU6050 init must be after I2C init and SystemClock_Config */
+  /* MPU6050 và QMC5883L init must be after I2C init and SystemClock_Config */
   MPU6050_Init();
+  QMC5883L_Init();
 
   /* USER CODE BEGIN 2 */
 
@@ -34,12 +37,20 @@ int main(void) {
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  char msg[] = "Hello\r\n";
   while (1) {
     MPU6050_Data_t imu;
+    QMC5883L_Data_t mag;
     /* USER CODE END WHILE */
     MPU6050_ReadRaw(&imu);
-    MPU6050_SendToUART(&imu);
+    QMC5883L_ReadRaw(&mag);
+
+    char txBuffer[150];
+    int len = sprintf(
+        txBuffer,
+        "ACC: %.2f %.2f %.2f | GYR: %.2f %.2f %.2f | MAG: %.2f %.2f %.2f\r\n",
+        imu.Ax, imu.Ay, imu.Az, imu.Gx, imu.Gy, imu.Gz, mag.Mx, mag.My, mag.Mz);
+    HAL_UART_Transmit(&huart3, (uint8_t *)txBuffer, len, 100);
+
     HAL_Delay(200);
 
     /* USER CODE BEGIN 3 */
@@ -91,21 +102,20 @@ void SystemClock_Config(void) {
 }
 
 /* USER CODE BEGIN 4 */
-
 void MPU6050_SendToUART(MPU6050_Data_t *data) {
   char txBuffer[150]; // Tạo một mảng bộ đệm chứa chuỗi ký tự
 
   // 1. In dữ liệu đã convert ra đơn vị thực tế (float)
   // Gia tốc: đơn vị g, Gyro: đơn vị deg/s
   int len = sprintf(txBuffer,
-		  "ACC (g): X=%.2f, Y=%.2f, Z=%.2f | GYRO (deg/s): X=%.2f, Y=%.2f, Z=%.2f\r\n",
-		  data->Ax, data->Ay, data->Az, data->Gx, data->Gy, data->Gz);
+                    "ACC (g): X=%.2f, Y=%.2f, Z=%.2f | GYRO (deg/s): X=%.2f, "
+                    "Y=%.2f, Z=%.2f\r\n",
+                    data->Ax, data->Ay, data->Az, data->Gx, data->Gy, data->Gz);
 
   // 2. Lệnh của STM32 để đẩy toàn bộ chuỗi ký tự này ra cổng UART3
   // Thời gian chờ tối đa (timeout) là 100ms
   HAL_UART_Transmit(&huart3, (uint8_t *)txBuffer, len, 100);
 }
-
 /* USER CODE END 4 */
 
 /**

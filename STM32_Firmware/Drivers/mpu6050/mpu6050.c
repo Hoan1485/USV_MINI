@@ -36,19 +36,35 @@ void MPU6050_ReadRaw(MPU6050_Data_t *data) {
     data->Gx = data->GyroX / 131.0f;
     data->Gy = data->GyroY / 131.0f;
     data->Gz = data->GyroZ / 131.0f;
-  } else {
-    data->AccX = 0;
-    data->AccY = 0;
-    data->AccZ = 0;
-    data->GyroX = 0;
-    data->GyroY = 0;
-    data->GyroZ = 0;
+  } else if (status == HAL_ERROR) {
+    uint32_t err_code = HAL_I2C_GetError(&hi2c1);
+    uint8_t value_err = 0;
+    if (err_code == HAL_I2C_ERROR_AF) { // Lỗi sai địa chỉ hoặc hỏng dây, NACK
+      value_err = 1;
+    } else if (err_code == HAL_I2C_ERROR_BERR) { // Do nhiễu đường truyền hoặc
+                                                 // thiếu điện trở kéo lên
+      value_err = 2;
+    } else if (err_code == HAL_I2C_ERROR_ARLO) { // Tranh chấp Bus
+      value_err = 3;
+    }
 
-    data->Ax = 0.0f;
-    data->Ay = 0.0f;
-    data->Az = 0.0f;
-    data->Gx = 0.0f;
-    data->Gy = 0.0f;
-    data->Gz = 0.0f;
+    data->AccX = value_err;
+    data->AccY = value_err;
+    data->AccZ = value_err;
+    data->GyroX = value_err;
+    data->GyroY = value_err;
+    data->GyroZ = value_err;
+
+    float value_err_f = (float)value_err;
+
+    data->Ax = value_err_f;
+    data->Ay = value_err_f;
+    data->Az = value_err_f;
+    data->Gx = value_err_f;
+    data->Gy = value_err_f;
+    data->Gz = value_err_f;
+
+    HAL_I2C_DeInit(&hi2c1);
+    HAL_I2C_Init(&hi2c1);
   }
 }
