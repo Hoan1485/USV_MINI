@@ -1,4 +1,5 @@
 #include "main.h"
+#include "ds18b20.h"
 #include "gpio.h"
 #include "i2c.h"
 #include "qmc5883l.h"
@@ -6,12 +7,15 @@
 #include "usart.h"
 #include <mpu6050.h>
 
-
 #include <stdio.h>
+#include "atgm336.h"
 
 void SystemClock_Config(void);
 
 void MPU6050_SendToUART();
+
+ATGM336H_Data_t gps_data;
+uint8_t gps_rx_data;
 
 int main(void) {
   HAL_Init();
@@ -30,28 +34,35 @@ int main(void) {
   /* MPU6050 và QMC5883L init must be after I2C init and SystemClock_Config */
   MPU6050_Init();
   QMC5883L_Init();
+  DS18B20_Init();
+  DS18B20_Request_Temp(); // Bắt đầu quá trình đo nhiệt độ đầu tiên
 
   /* USER CODE BEGIN 2 */
-
+  ATGM336H_Init(&gps_data);
+  HAL_UART_Receive_IT(&huart1, &gps_rx_data, 1);
   /* USER CODE END 2 */
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1) {
-    MPU6050_Data_t imu;
-    QMC5883L_Data_t mag;
+    MPU6050_Data_t imu = {0};
+    QMC5883L_Data_t mag = {0};
     /* USER CODE END WHILE */
     MPU6050_ReadRaw(&imu);
     QMC5883L_ReadRaw(&mag);
+    float ds18b20_temp = DS18B20_Read_Temp();
+    DS18B20_Request_Temp(); // Yêu cầu đo cho chu kỳ tiếp theo
 
-    char txBuffer[150];
-    int len = sprintf(
-        txBuffer,
-        "ACC: %.2f %.2f %.2f | GYR: %.2f %.2f %.2f | MAG: %.2f %.2f %.2f\r\n",
-        imu.Ax, imu.Ay, imu.Az, imu.Gx, imu.Gy, imu.Gz, mag.Mx, mag.My, mag.Mz);
+    char txBuffer[200];
+    int len = sprintf(txBuffer,
+                      "ACC: %.2f %.2f %.2f | GYR: %.2f %.2f %.2f | MAG: %.2f "
+                      "%.2f %.2f | TEMP: %.2f | GPS: %d, %.5f, %.5f, %.1f km/h\r\n",
+                      imu.Ax, imu.Ay, imu.Az, imu.Gx, imu.Gy, imu.Gz, mag.Mx,
+                      mag.My, mag.Mz, ds18b20_temp, 
+                      gps_data.valid, gps_data.latitude, gps_data.longitude, gps_data.speed_kph);
     HAL_UART_Transmit(&huart3, (uint8_t *)txBuffer, len, 100);
 
-    HAL_Delay(200);
+    HAL_Delay(800);
 
     /* USER CODE BEGIN 3 */
   }
@@ -115,6 +126,13 @@ void MPU6050_SendToUART(MPU6050_Data_t *data) {
   // 2. Lệnh của STM32 để đẩy toàn bộ chuỗi ký tự này ra cổng UART3
   // Thời gian chờ tối đa (timeout) là 100ms
   HAL_UART_Transmit(&huart3, (uint8_t *)txBuffer, len, 100);
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+  if (huart->Instance == USART1) {
+    ATGM336H_ProcessChar((char)gps_rx_data, &gps_data);
+    HAL_UART_Receive_IT(&huart1, &gps_rx_data, 1);
+  }
 }
 /* USER CODE END 4 */
 
