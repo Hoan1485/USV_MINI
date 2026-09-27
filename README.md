@@ -16,9 +16,9 @@ Cả **ESP32** và **STM32F407VET6** đều sử dụng mức logic **3.3V TTL**
        ESP32 (Dashboard / Telemetry)              STM32F407VET6 (Core Controller)
     ┌─────────────────────────────────┐        ┌───────────────────────────────────┐
     │                                 │        │                                   │
-    │  GPIO 17 (UART2 TX)  ───────────┼───────>│  PB11 (USART3 RX)                 │
+    │  GPIO 17 (UART2 TX)  ───────────┼───────>│  PA3 (USART2 RX)                  │
     │                                 │        │                                   │
-    │  GPIO 16 (UART2 RX)  <──────────┼────────┤  PB10 (USART3 TX)                 │
+    │  GPIO 16 (UART2 RX)  <──────────┼────────┤  PA2 (USART2 TX)                  │
     │                                 │        │                                   │
     │  GND                 ───────────┼────────┤  GND (Chung Mass)                 │
     └─────────────────────────────────┘        └───────────────────────────────────┘
@@ -27,11 +27,14 @@ Cả **ESP32** và **STM32F407VET6** đều sử dụng mức logic **3.3V TTL**
 #### Bảng tra cứu chân kết nối (Pinout Table):
 | ESP32 Pin | Hướng tín hiệu | STM32F407 Pin | Chức năng STM32 | Cấu hình UART |
 | :--- | :---: | :--- | :--- | :--- |
-| **GPIO 17** (TX2) | $\longrightarrow$ | **PB11** | USART3_RX | 115200 bps, 8N1 |
-| **GPIO 16** (RX2) | $\longleftarrow$ | **PB10** | USART3_TX | 115200 bps, 8N1 |
+| **GPIO 17** (TX2) | $\longrightarrow$ | **PA3** | USART2_RX | 115200 bps, 8N1 |
+| **GPIO 16** (RX2) | $\longleftarrow$ | **PA2** | USART2_TX | 115200 bps, 8N1 |
 | **GND** | $\longleftrightarrow$ | **GND** | Ground | Chung mass |
 
-*(Lưu ý: Chân PA9/PA10 trên STM32 đã được dành riêng cho USART1 kết nối module GPS ATGM336H).*
+#### Phân bổ 3 cổng UART trên STM32F407:
+* **USART1 (PA9 TX / PA10 RX):** Dành riêng cho Module GPS ATGM336H (9600 / 115200 bps).
+* **USART2 (PA2 TX / PA3 RX):** Giao tiếp điều khiển & Telemetry với ESP32.
+* **USART3 (PB10 TX / PB11 RX):** Cổng USART_DEBUG để in log/debug lên PC.
 
 ---
 

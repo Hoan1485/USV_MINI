@@ -31,6 +31,7 @@ int main(void) {
   MX_TIM1_Init();
   MX_TIM4_Init();
   MX_USART1_UART_Init();
+  MX_USART2_UART_Init();
   MX_USART3_UART_Init();
 
   /* MPU6050 và QMC5883L init must be after I2C init and SystemClock_Config */
@@ -42,7 +43,7 @@ int main(void) {
   /* USER CODE BEGIN 2 */
   ATGM336H_Init(&gps_data);
   HAL_UART_Receive_IT(&huart1, &gps_rx_data, 1);
-  ESP32Comm_Init(&huart3);
+  ESP32Comm_Init(&huart2);
   /* USER CODE END 2 */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -157,7 +158,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART1) {
     ATGM336H_ProcessChar((char)gps_rx_data, &gps_data);
     HAL_UART_Receive_IT(&huart1, &gps_rx_data, 1);
-  } else if (huart->Instance == USART3) {
+  } else if (huart->Instance == USART2) {
     ESP32Comm_RxCpltCallback(huart);
   }
 }
