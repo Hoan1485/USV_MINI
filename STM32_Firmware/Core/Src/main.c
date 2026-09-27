@@ -8,7 +8,9 @@
 #include <mpu6050.h>
 
 #include <stdio.h>
+#include <math.h>
 #include "atgm336.h"
+#include "esp32_comm.h"
 
 void SystemClock_Config(void);
 
@@ -40,29 +42,52 @@ int main(void) {
   /* USER CODE BEGIN 2 */
   ATGM336H_Init(&gps_data);
   HAL_UART_Receive_IT(&huart1, &gps_rx_data, 1);
+  ESP32Comm_Init(&huart3);
   /* USER CODE END 2 */
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint32_t last_status_tick = 0;
+  uint32_t last_temp_req = 0;
+
   while (1) {
     MPU6050_Data_t imu = {0};
     QMC5883L_Data_t mag = {0};
     /* USER CODE END WHILE */
+
+    /* 1. Đọc dữ liệu cảm biến */
     MPU6050_ReadRaw(&imu);
     QMC5883L_ReadRaw(&mag);
-    float ds18b20_temp = DS18B20_Read_Temp();
-    DS18B20_Request_Temp(); // Yêu cầu đo cho chu kỳ tiếp theo
 
-    char txBuffer[200];
-    int len = sprintf(txBuffer,
-                      "ACC: %.2f %.2f %.2f | GYR: %.2f %.2f %.2f | MAG: %.2f "
-                      "%.2f %.2f | TEMP: %.2f | GPS: %d, %.5f, %.5f, %.1f km/h\r\n",
-                      imu.Ax, imu.Ay, imu.Az, imu.Gx, imu.Gy, imu.Gz, mag.Mx,
-                      mag.My, mag.Mz, ds18b20_temp, 
-                      gps_data.valid, gps_data.latitude, gps_data.longitude, gps_data.speed_kph);
-    HAL_UART_Transmit(&huart3, (uint8_t *)txBuffer, len, 100);
+    /* 2. Tính góc hướng la bàn (Heading) từ QMC5883L */
+    float heading = atan2f(mag.My, mag.Mx) * 180.0f / 3.14159265f;
+    if (heading < 0.0f) {
+      heading += 360.0f;
+    }
+    g_usv_state.heading = heading;
 
-    HAL_Delay(800);
+    /* 3. Cập nhật nhiệt độ nước từ DS18B20 (mỗi 750ms) */
+    if (HAL_GetTick() - last_temp_req >= 750) {
+      last_temp_req = HAL_GetTick();
+      g_usv_state.water_temp = DS18B20_Read_Temp();
+      DS18B20_Request_Temp();
+    }
+
+    /* 4. Cập nhật dữ liệu GPS */
+    g_usv_state.current_lat = gps_data.latitude;
+    g_usv_state.current_lon = gps_data.longitude;
+    g_usv_state.speed = gps_data.speed_kph / 3.6f; /* m/s */
+    g_usv_state.gps_valid = (gps_data.valid != 0);
+
+    /* 5. Xử lý lệnh nhận được từ ESP32 */
+    ESP32Comm_Process();
+
+    /* 6. Định kỳ 500ms gửi STATUS lên ESP32 Web Dashboard */
+    if (HAL_GetTick() - last_status_tick >= 500) {
+      last_status_tick = HAL_GetTick();
+      ESP32Comm_SendStatus();
+    }
+
+    HAL_Delay(10);
 
     /* USER CODE BEGIN 3 */
   }
@@ -132,6 +157,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART1) {
     ATGM336H_ProcessChar((char)gps_rx_data, &gps_data);
     HAL_UART_Receive_IT(&huart1, &gps_rx_data, 1);
+  } else if (huart->Instance == USART3) {
+    ESP32Comm_RxCpltCallback(huart);
   }
 }
 /* USER CODE END 4 */
