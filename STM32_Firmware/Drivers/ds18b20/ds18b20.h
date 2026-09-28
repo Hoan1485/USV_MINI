@@ -7,8 +7,8 @@
 #define DS18B20_PORT GPIOE
 #define DS18B20_PIN  GPIO_PIN_11
 
-void DS18B20_Init(void);
-void DS18B20_Request_Temp(void);
-float DS18B20_Read_Temp(void);
+void init_ds18b20(void);
+void request_temperature(void);
+float read_temperature(void);
 
 #endif // DS18B20_H

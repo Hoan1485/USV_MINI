@@ -1,4 +1,4 @@
-#include "ds18b20.h"
+#include <DS18B20/DS18B20.h>
 
 // --- Hàm trễ microsecond bằng DWT ---
 static void DWT_Delay_Init(void) {
@@ -102,36 +102,43 @@ static uint8_t DS18B20_Read_Byte(void) {
   return data;
 }
 
-// --- API ---
+// --- Các hàm cho người dùng (API) ---
 
-void DS18B20_Init(void) {
-  DWT_Delay_Init();
-  // Bật xung nhịp cho port
+// Hàm khởi tạo cảm biến nhiệt độ
+void init_ds18b20(void) {
+  DWT_Delay_Init(); // Khởi tạo bộ đếm thời gian trễ micro-giây
+  // Bật xung nhịp cho cổng kết nối với cảm biến
   if (DS18B20_PORT == GPIOE) {
     __HAL_RCC_GPIOE_CLK_ENABLE();
   }
 }
 
-void DS18B20_Request_Temp(void) {
+// Hàm gửi lệnh yêu cầu cảm biến bắt đầu đo nhiệt độ
+void request_temperature(void) {
   if (DS18B20_Reset()) {
-    DS18B20_Write_Byte(0xCC); // Skip ROM
-    DS18B20_Write_Byte(0x44); // Convert T
+    DS18B20_Write_Byte(0xCC); // Lệnh Skip ROM (Bỏ qua việc gọi địa chỉ, vì chỉ có 1 cảm biến)
+    DS18B20_Write_Byte(0x44); // Lệnh Convert T (Bảo cảm biến hãy đo nhiệt độ đi)
   }
 }
 
-float DS18B20_Read_Temp(void) {
+// Hàm đọc kết quả nhiệt độ (Sau khi đã yêu cầu đo)
+float read_temperature(void) {
   uint8_t temp_l, temp_h;
   uint16_t temp;
-  float temperature = -999.0f; // Trả về giá trị này nếu lỗi
+  float temperature = -999.0f; // Trả về giá trị -999 nếu bị lỗi (đứt dây, hỏng...)
 
   if (DS18B20_Reset()) {
-    DS18B20_Write_Byte(0xCC); // Skip ROM
-    DS18B20_Write_Byte(0xBE); // Read Scratchpad
+    DS18B20_Write_Byte(0xCC); // Lệnh Skip ROM
+    DS18B20_Write_Byte(0xBE); // Lệnh Read Scratchpad (Đọc bộ nhớ của cảm biến)
 
-    temp_l = DS18B20_Read_Byte();
-    temp_h = DS18B20_Read_Byte();
+    // Đọc 2 byte dữ liệu nhiệt độ
+    temp_l = DS18B20_Read_Byte(); // Byte thấp
+    temp_h = DS18B20_Read_Byte(); // Byte cao
 
+    // Ghép 2 byte lại thành 1 số 16-bit
     temp = (temp_h << 8) | temp_l;
+    
+    // Chia cho 16 để ra nhiệt độ thực tế (theo datasheet của DS18B20)
     temperature = (float)temp / 16.0f;
   }
   return temperature;

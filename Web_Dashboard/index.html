@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>USV Dashboard Pro - Trạm Điều Khiển</title>
+    <!-- Thư viện Font Awesome cho các icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Thư viện MQTT -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a; /* Nền tối */
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --primary: #38bdf8; /* Xanh dương sáng */
+            --success: #34d399; /* Xanh lá */
+            --danger: #fb7185; /* Đỏ nhạt */
+            --warning: #fbbf24; /* Vàng */
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(52, 211, 153, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        /* HEADER */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .header-title h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--primary), var(--success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-title p {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: var(--card-bg);
+            border-radius: 50px;
+            border: 1px solid var(--card-border);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--danger);
+            box-shadow: 0 0 10px var(--danger);
+            transition: all 0.3s;
+        }
+        .dot.connected {
+            background-color: var(--success);
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        /* BỐ CỤC LƯỚI CHÍNH */
+        .main-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            flex: 1;
+        }
+
+        /* THẺ (CARDS) Chung */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+        }
+        .card-header i {
+            color: var(--primary);
+        }
+
+        /* THÔNG SỐ (TELEMETRY) */
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .data-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .data-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .data-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .data-value.latlon {
+            font-size: 1.1rem;
+        }
+
+        /* ĐIỀU KHIỂN (CONTROLS) */
+        .controls-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .mode-switch {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 50px;
+            padding: 5px;
+            width: 100%;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .mode-btn.active {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+        }
+
+        /* D-PAD Bảng Điều Khiển */
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 70px);
+            grid-template-rows: repeat(3, 70px);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .dpad-btn {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 15px;
+            color: var(--primary);
+            font-size: 1.8rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        
+        /* Hiệu ứng ấn (Active) cho cả chạm cảm ứng và click chuột */
+        .dpad-btn:active, .dpad-btn.pressed {
+            background: var(--primary);
+            color: #000;
+            transform: scale(0.9);
+            box-shadow: 0 0 20px var(--primary);
+        }
+
+        .btn-up { grid-column: 2; grid-row: 1; }
+        .btn-left { grid-column: 1; grid-row: 2; }
+        .btn-stop { grid-column: 2; grid-row: 2; background: rgba(251, 113, 133, 0.1); border-color: var(--danger); color: var(--danger); }
+        .btn-stop:active, .btn-stop.pressed { background: var(--danger); color: #000; box-shadow: 0 0 20px var(--danger); }
+        .btn-right { grid-column: 3; grid-row: 2; }
+        .btn-down { grid-column: 2; grid-row: 3; }
+
+        /* Action Buttons */
+        .action-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--warning), #f59e0b);
+            color: #000;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+            margin-top: auto;
+        }
+        .action-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 5px rgba(251, 191, 36, 0.3);
+        }
+
+        /* Tối ưu cho màn hình nhỏ (Điện thoại) */
+        @media (max-width: 600px) {
+            .telemetry-grid {
+                grid-template-columns: 1fr;
+            }
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            .dpad {
+                grid-template-columns: repeat(3, 80px);
+                grid-template-rows: repeat(3, 80px);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PHẦN ĐẦU TRANG -->
+    <div class="header">
+        <div class="header-title">
+            <h1>USV DASHBOARD</h1>
+            <p>Trạm điều khiển tàu không người lái</p>
+        </div>
+        <div class="status-indicator">
+            <div id="mqtt-dot" class="dot"></div>
+            <span id="mqtt-status">Đang kết nối...</span>
+        </div>
+    </div>
+
+    <!-- PHẦN CHÍNH -->
+    <div class="main-grid">
+        
+        <!-- THẺ HIỂN THỊ THÔNG SỐ (TELEMETRY) -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fa-solid fa-gauge-high"></i>
+                Dữ Liệu Hành Trình
+            </div>
+            <div class="telemetry-grid">
+                <div class="data-box">
+                    <span class="data-label">Vận Tốc (Km/h)</span>
+                    <span class="data-value" id="val-speed">0.0</span>
+                </div>
+                <div class="data-box">
+                    <span class="data-label">Hướng Bàn (Độ)</span>
+                    <span class="data-value" id="val-heading">0.0°</span>
+                </div>
+                <div class="data-box">
+                    <span class="data-label">Nhiệt Độ Nước</span>
+                    <span class="data-value" id="val-temp" style="color: var(--danger);">0.0°C</span>
+                </div>
+                <div class="data-box">
+                    <span class="data-label">Tọa độ GPS</span>
+                    <span class="data-value latlon" id="val-gps">Đang tìm vệ tinh...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- THẺ ĐIỀU KHIỂN (CONTROLS) -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fa-solid fa-gamepad"></i>
+                Bảng Điều Khiển
+            </div>
+            
+            <div class="controls-container">
+                <!-- Chuyển đổi chế độ lái -->
+                <div class="mode-switch">
+                    <button class="mode-btn active" id="btn-manual" onclick="setMode(0)">BẰNG TAY (MANUAL)</button>
+                    <button class="mode-btn" id="btn-auto" onclick="setMode(1)">TỰ ĐỘNG (AUTO)</button>
+                </div>
+
+                <!-- Bảng Joystick / D-Pad -->
+                <!-- Sử dụng các sự kiện mousedown/mouseup (máy tính) và touchstart/touchend (điện thoại) -->
+                <div class="dpad">
+                    <div class="dpad-btn btn-up" onmousedown="sendSpeed(1800, 1800)" onmouseup="sendSpeed(1500, 1500)" ontouchstart="sendSpeed(1800, 1800); event.preventDefault();" ontouchend="sendSpeed(1500, 1500); event.preventDefault();">
+                        <i class="fa-solid fa-chevron-up"></i>
+                    </div>
+                    
+                    <div class="dpad-btn btn-left" onmousedown="sendSpeed(1300, 1800)" onmouseup="sendSpeed(1500, 1500)" ontouchstart="sendSpeed(1300, 1800); event.preventDefault();" ontouchend="sendSpeed(1500, 1500); event.preventDefault();">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </div>
+                    
+                    <div class="dpad-btn btn-stop" onclick="sendSpeed(1500, 1500)">
+                        <i class="fa-solid fa-circle-stop"></i>
+                    </div>
+                    
+                    <div class="dpad-btn btn-right" onmousedown="sendSpeed(1800, 1300)" onmouseup="sendSpeed(1500, 1500)" ontouchstart="sendSpeed(1800, 1300); event.preventDefault();" ontouchend="sendSpeed(1500, 1500); event.preventDefault();">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                    
+                    <div class="dpad-btn btn-down" onmousedown="sendSpeed(1200, 1200)" onmouseup="sendSpeed(1500, 1500)" ontouchstart="sendSpeed(1200, 1200); event.preventDefault();" ontouchend="sendSpeed(1500, 1500); event.preventDefault();">
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                </div>
+
+                <!-- Nút Rải Mồi (Feed) -->
+                <button class="action-btn" onclick="sendFeed()">
+                    <i class="fa-solid fa-fish"></i> RẢI MỒI CÂU
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- LOGIC LẬP TRÌNH (JAVASCRIPT) -->
+    <script>
+        // --- CẤU HÌNH MQTT ---
+        // Sử dụng giao thức wss (WebSockets Secure) port 8084 của EMQX
+        const mqttServer = "broker.emqx.io";
+        const mqttPort = 8084; 
+        const clientId = "WebDash_" + Math.random().toString(16).substr(2, 8); // Tạo ID ngẫu nhiên để không bị trùng
+        
+        const topic_telemetry = "usvmini/telemetry"; // Đọc dữ liệu
+        const topic_command = "usvmini/command";     // Gửi lệnh
+
+        // Tạo client MQTT
+        let client = new Paho.MQTT.Client(mqttServer, mqttPort, clientId);
+
+        // Gắn các hàm xử lý sự kiện
+        client.onConnectionLost = onConnectionLost;
+        client.onMessageArrived = onMessageArrived;
+
+        // Cấu hình kết nối (Dùng wss)
+        let options = {
+            useSSL: true, // Kết nối bảo mật
+            timeout: 5,
+            onSuccess: onConnect,
+            onFailure: function (message) {
+                console.log("Lỗi kết nối: " + message.errorMessage);
+                setTimeout(MQTT_Connect, 5000); // Thử lại sau 5 giây
+            }
+        };
+
+        // Bắt đầu kết nối
+        function MQTT_Connect() {
+            document.getElementById("mqtt-status").innerText = "Đang kết nối tới Máy chủ...";
+            client.connect(options);
+        }
+
+        // Khi kết nối thành công
+        function onConnect() {
+            console.log("Đã kết nối tới MQTT Broker!");
+            
+            // Cập nhật giao diện
+            document.getElementById("mqtt-dot").classList.add("connected");
+            document.getElementById("mqtt-status").innerText = "Đã kết nối trực tuyến";
+            
+            // Đăng ký nhận dữ liệu từ kênh telemetry
+            client.subscribe(topic_telemetry);
+        }
+
+        // Khi bị rớt mạng
+        function onConnectionLost(responseObject) {
+            if (responseObject.errorCode !== 0) {
+                console.log("Mất kết nối: " + responseObject.errorMessage);
+                // Cập nhật giao diện
+                document.getElementById("mqtt-dot").classList.remove("connected");
+                document.getElementById("mqtt-status").innerText = "Mất kết nối. Đang thử lại...";
+                
+                // Tự động thử kết nối lại
+                setTimeout(MQTT_Connect, 5000);
+            }
+        }
+
+        // Khi nhận được tin nhắn từ ESP32 gửi lên
+        function onMessageArrived(message) {
+            // Định dạng chuỗi là: TEL,lat,lon,heading,temp,speed
+            let payload = message.payloadString;
+            console.log("Nhận: " + payload);
+            
+            if(payload.startsWith("TEL,")) {
+                // Cắt chuỗi dựa vào dấu phẩy
+                let parts = payload.split(",");
+                if(parts.length >= 6) {
+                    let lat = parseFloat(parts[1]).toFixed(5);
+                    let lon = parseFloat(parts[2]).toFixed(5);
+                    let heading = parseFloat(parts[3]).toFixed(1);
+                    let temp = parseFloat(parts[4]).toFixed(1);
+                    let speed = parseFloat(parts[5]).toFixed(1);
+
+                    // Cập nhật lên màn hình
+                    document.getElementById("val-speed").innerText = speed;
+                    document.getElementById("val-heading").innerText = heading + "°";
+                    document.getElementById("val-temp").innerText = temp + "°C";
+                    
+                    if (lat == "0.00000" || lon == "0.00000") {
+                        document.getElementById("val-gps").innerText = "Đang tìm vệ tinh...";
+                    } else {
+                        document.getElementById("val-gps").innerText = lat + ", " + lon;
+                    }
+                }
+            }
+        }
+
+        // Hàm Gửi tin nhắn qua MQTT
+        function sendCommand(cmdStr) {
+            if (client.isConnected()) {
+                let message = new Paho.MQTT.Message(cmdStr);
+                message.destinationName = topic_command;
+                client.send(message);
+                console.log("Đã gửi lệnh: " + cmdStr);
+            } else {
+                console.log("Không thể gửi lệnh: Chưa kết nối máy chủ!");
+            }
+        }
+
+        // --- CÁC HÀM XỬ LÝ NÚT BẤM ---
+
+        // Hàm Chuyển chế độ lái
+        function setMode(mode) {
+            // mode = 0 (Bằng tay), mode = 1 (Tự động)
+            sendCommand("CMD,MODE," + mode);
+            
+            // Đổi màu nút trên Web
+            if(mode === 0) {
+                document.getElementById("btn-manual").classList.add("active");
+                document.getElementById("btn-auto").classList.remove("active");
+            } else {
+                document.getElementById("btn-auto").classList.add("active");
+                document.getElementById("btn-manual").classList.remove("active");
+            }
+        }
+
+        // Hàm gửi tốc độ (Joystick/Nút điều hướng)
+        function sendSpeed(left, right) {
+            sendCommand("CMD,SPEED," + left + "," + right);
+        }
+
+        // Hàm Rải Mồi
+        function sendFeed() {
+            sendCommand("CMD,FEED");
+        }
+
+        // Chạy ngay khi tải xong trang web
+        window.onload = function() {
+            MQTT_Connect();
+        };
+
+    </script>
+</body>
+</html>

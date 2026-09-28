@@ -12,7 +12,7 @@ typedef struct {
   float Gx, Gy, Gz; // Tốc độ góc (đơn vị: deg/s)
 } MPU6050_Data_t;
 
-void MPU6050_Init(void);
-void MPU6050_ReadRaw(MPU6050_Data_t *data);
+void init_mpu6050(void);
+void read_mpu6050_data(MPU6050_Data_t *data);
 
 #endif

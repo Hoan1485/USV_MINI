@@ -71,6 +71,14 @@ void Error_Handler(void);
 #define USART1_TX_GPS_GPIO_Port GPIOA
 #define USART1_RX_GPS_Pin GPIO_PIN_10
 #define USART1_RX_GPS_GPIO_Port GPIOA
+#define INT1_Pin GPIO_PIN_2
+#define INT1_GPIO_Port GPIOD
+#define INT2_Pin GPIO_PIN_3
+#define INT2_GPIO_Port GPIOD
+#define INT3_Pin GPIO_PIN_4
+#define INT3_GPIO_Port GPIOD
+#define INT4_Pin GPIO_PIN_5
+#define INT4_GPIO_Port GPIOD
 #define PWM_ESC_L_Pin GPIO_PIN_6
 #define PWM_ESC_L_GPIO_Port GPIOB
 #define PWM_ESC_R_Pin GPIO_PIN_7
