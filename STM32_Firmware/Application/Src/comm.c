@@ -1,9 +1,10 @@
-#include "comm.h"
-#include "stepper.h"
+#include "../../Application/Inc/comm.h"
+
 #include "usart.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../../Application/Inc/stepper.h"
 
 // Biến lưu trạng thái hiện tại của tàu (điều khiển bằng tay hay tự động)
 BoatMode current_mode = MODE_MANUAL; // Mặc định là điều khiển bằng tay (Manual)
@@ -19,6 +20,7 @@ int manual_right_speed = 1500;
 
 // Cờ yêu cầu rải mồi
 uint8_t feed_request_flag = 0;
+uint32_t feed_duration_ms = 3000; // Mặc định 3 giây
 
 // Cấu hình bộ nhớ đệm (buffer) để nhận lệnh
 #define RX_CMD_MAX_LEN 64 // Chiều dài tối đa của một câu lệnh là 64 ký tự
@@ -79,8 +81,20 @@ void Comm_ParseCommand(char *cmd) {
   }
   // Lệnh cho cá ăn FEED|ms
   else if (strncmp(cmd, "FEED|", 5) == 0) {
-    feed_request_flag =
-        1; // Chỉ đặt cờ báo, không gọi hàm có chứa HAL_Delay ở đây
+    feed_duration_ms = atoi(cmd + 5);
+    if (feed_duration_ms == 0) feed_duration_ms = 3000;
+    feed_request_flag = 1;
+  }
+  // Hỗ trợ lệnh từ ESP32_Demo / Web Dashboard: CMD,FEED,ms hoặc CMD,FEED
+  else if (strncmp(cmd, "CMD,FEED", 8) == 0) {
+    char *ms_str = strrchr(cmd, ',');
+    if (ms_str != NULL && ms_str != cmd + 3) {
+      feed_duration_ms = atoi(ms_str + 1);
+    } else {
+      feed_duration_ms = 3000;
+    }
+    if (feed_duration_ms == 0) feed_duration_ms = 3000;
+    feed_request_flag = 1;
   }
   // Các lệnh Auto (Chưa kết nối UI Map, tạm để cờ kích hoạt)
   else if (strcmp(cmd, "AUTO_START") == 0) {
@@ -110,9 +124,8 @@ void Comm_SendTelemetry(float lat, float lon, float heading, float temp,
 
   // Ghép các con số thành một câu hoàn chỉnh có cấu trúc cho Web Dashboard
   int len = sprintf(txBuffer,
-                    "STATUS|Kinh độ: %.6f|Vĩ độ: %.6f|Hướng: %.1f|Nhiệt độ: "
-                    "%.2f|12.6|0.5|Tốc độ: %.1f|0|MANUAL|1\n",
-                    lat, lon, heading, speed, temp);
+                    "TEL,%.6f,%.6f,%.1f,%.1f,%.1f\n",
+                    lat, lon, heading, temp, speed);
 
   // Gửi chuỗi này qua UART2 (nối với ESP32)
   extern UART_HandleTypeDef huart2;

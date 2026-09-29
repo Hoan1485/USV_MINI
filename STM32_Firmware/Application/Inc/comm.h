@@ -15,6 +15,7 @@ extern uint8_t new_waypoint_flag;
 extern int manual_left_speed;
 extern int manual_right_speed;
 extern uint8_t feed_request_flag;
+extern uint32_t feed_duration_ms;
 
 void Comm_Init(void);
 void Comm_ParseCommand(char *cmd);

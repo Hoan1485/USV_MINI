@@ -22,7 +22,7 @@ Hệ thống được chia làm 2 khối xử lý chính:
 
 ### 1. Giao tiếp giữa STM32 và ESP32 (UART)
 Sử dụng cổng USART3 trên STM32 và Hardware Serial 2 trên ESP32. Tốc độ Baudrate: **115200**.
-| STM32 (USART3) | ESP32 (Serial 2) | Chức năng |
+| STM32 (USART2) | ESP32 (Serial 2) | Chức năng |
 | :--- | :--- | :--- |
 | TX | RX (Pin 16) | Truyền dữ liệu trạng thái từ STM32 lên ESP32 |
 | RX | TX (Pin 17) | Nhận lệnh điều khiển từ ESP32 xuống STM32 |
@@ -39,8 +39,8 @@ Sử dụng cổng USART3 trên STM32 và Hardware Serial 2 trên ESP32. Tốc �
 ### 3. Động cơ và Cơ cấu chấp hành (STM32)
 | Cơ cấu | Cổng điều khiển | Chức năng |
 | :--- | :--- | :--- |
-| **Động cơ Trái (Left Motor)** | PWM (TIM) | Điều khiển chân vịt trái |
-| **Động cơ Phải (Right Motor)** | PWM (TIM) | Điều khiển chân vịt phải |
+| **Động cơ Trái (Left Motor)** | PWM (TIM4_CH1) | Điều khiển chân vịt trái |
+| **Động cơ Phải (Right Motor)** | PWM (TIM4_CH2) | Điều khiển chân vịt phải |
 | **Cơ cấu thả thức ăn** | GPIO (Stepper) | Điều khiển động cơ bước nhả mồi |
 
 *(Lưu ý: Bạn có thể thay đổi chi tiết cấu hình chân PWM/GPIO cụ thể trong file `.ioc` của CubeMX tùy theo cách cắm thực tế của phần cứng).*

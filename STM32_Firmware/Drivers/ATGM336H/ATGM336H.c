@@ -1,4 +1,4 @@
-#include <ATGM336H/ATGM336H.h>
+#include "ATGM336H.h"
 #include <stdlib.h>		// Thư viện dùng để ...
 #include <string.h>		// Thư viện dùng để làm việc với chuỗi ký tự
 

@@ -1,4 +1,4 @@
-#include "stepper.h"
+#include "../../Application/Inc/stepper.h"
 
 // Trình tự kích xung half-step cho động cơ 28BYJ-48
 const uint8_t step_sequence[8] = {
@@ -42,10 +42,12 @@ void rotate_stepper(float angle, uint8_t direction) {
   stepper_direction = direction;
 }
 
-// Hàm thực hiện hành động rải mồi
-void drop_bait(void) {
-  // Đặt mục tiêu xoay 1 vòng (360 độ)
-  rotate_stepper(360, 1);
+// Hàm thực hiện hành động rải mồi theo thời gian
+void drop_bait(uint32_t duration_ms) {
+  // Đặt mục tiêu số bước theo thời gian (1 bước tốn 2ms)
+  stepper_target_steps = duration_ms / 2;
+  stepper_current_step = 0;
+  stepper_direction = 1; // Thuận
 }
 
 // Hàm này BẮT BUỘC phải được gọi liên tục bên trong vòng lặp while(1) của main.c

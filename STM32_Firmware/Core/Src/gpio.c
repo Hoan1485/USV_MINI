@@ -58,7 +58,7 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(HX711_SCK_GPIO_Port, HX711_SCK_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, INT1_Pin|INT2_Pin|INT3_Pin|INT4_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, IN1_Pin|IN2_Pin|IN3_Pin|IN4_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : DS18B20_Pin */
   GPIO_InitStruct.Pin = DS18B20_Pin;
@@ -80,8 +80,8 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(HX711_SCK_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : INT1_Pin INT2_Pin INT3_Pin INT4_Pin */
-  GPIO_InitStruct.Pin = INT1_Pin|INT2_Pin|INT3_Pin|INT4_Pin;
+  /*Configure GPIO pins : IN1_Pin IN2_Pin IN3_Pin IN4_Pin */
+  GPIO_InitStruct.Pin = IN1_Pin|IN2_Pin|IN3_Pin|IN4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -90,5 +90,18 @@ void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 2 */
-
+void MX_Stepper_GPIO_Init(void)
+{
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  
+  GPIO_InitTypeDef GPIO_InitStruct_Stepper = {0};
+  
+  HAL_GPIO_WritePin(GPIOD, INT1_Pin|INT2_Pin|INT3_Pin|INT4_Pin, GPIO_PIN_RESET);
+  
+  GPIO_InitStruct_Stepper.Pin = INT1_Pin|INT2_Pin|INT3_Pin|INT4_Pin;
+  GPIO_InitStruct_Stepper.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct_Stepper.Pull = GPIO_NOPULL;
+  GPIO_InitStruct_Stepper.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct_Stepper);
+}
 /* USER CODE END 2 */

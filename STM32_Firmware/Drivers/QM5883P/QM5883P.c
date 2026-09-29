@@ -1,4 +1,4 @@
-#include <QM5883P/QM5883P.h>
+#include "QM5883P.h"
 
 #define QMC5883P_ADDR (0x2C << 1) // HP5883L Address
 

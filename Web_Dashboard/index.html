@@ -353,6 +353,11 @@
                     </div>
                 </div>
 
+                <!-- Cài đặt thời gian rải mồi -->
+                <div style="width: 100%; margin-bottom: 15px; text-align: left;">
+                    <label for="feed-time" style="color: var(--text-dim); font-size: 0.9rem;">Thời gian rải mồi (giây):</label>
+                    <input type="number" id="feed-time" value="3" min="1" max="60" style="width: 100%; padding: 12px; margin-top: 5px; border-radius: 12px; border: 1px solid var(--card-border); background: rgba(0,0,0,0.3); color: var(--primary); font-size: 1.1rem; outline: none;">
+                </div>
                 <!-- Nút Rải Mồi (Feed) -->
                 <button class="action-btn" onclick="sendFeed()">
                     <i class="fa-solid fa-fish"></i> RẢI MỒI CÂU
@@ -488,7 +493,9 @@
 
         // Hàm Rải Mồi
         function sendFeed() {
-            sendCommand("CMD,FEED");
+            let timeSec = document.getElementById("feed-time").value;
+            let timeMs = Math.round(timeSec * 1000);
+            sendCommand("CMD,FEED," + timeMs);
         }
 
         // Chạy ngay khi tải xong trang web
