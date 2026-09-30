@@ -1,121 +1,80 @@
-# USV_MINI - UART Communication Specification & Hardware Wiring
+# USV Mini (Unmanned Surface Vehicle)
 
-Tài liệu đặc tả giao thức truyền thông và sơ đồ kết nối phần cứng UART giữa **ESP32 (Web Dashboard / Gateway)** và **STM32F407 (Controller thật)** cũng như **ESP32 Giả lập (Simulator)**.
+Dự án **USV Mini** là một hệ thống tàu không người lái mini được thiết kế để thu thập dữ liệu thủy văn (nhiệt độ nước, tọa độ GPS) và thực hiện các nhiệm vụ tự động hóa như di chuyển theo quỹ đạo định trước hoặc rải thức ăn. 
 
----
-
-## 1. Sơ đồ kết nối phần cứng (Hardware Wiring)
-
-### A. Kết nối ESP32 với STM32F407 (Mạch thật)
-Cả **ESP32** và **STM32F407VET6** đều sử dụng mức logic **3.3V TTL**, do đó có thể kết nối trực tiếp các chân tín hiệu với nhau mà không cần mạch chuyển đổi mức logic (Logic Level Shifter).
-
-> [!IMPORTANT]
-> **BẮT BUỘC** phải nối chung mass (**GND**) giữa 2 board để ổn định điện thế tham chiếu.
-
-```text
-       ESP32 (Dashboard / Telemetry)              STM32F407VET6 (Core Controller)
-    ┌─────────────────────────────────┐        ┌───────────────────────────────────┐
-    │                                 │        │                                   │
-    │  GPIO 17 (UART2 TX)  ───────────┼───────>│  PA3 (USART2 RX)                  │
-    │                                 │        │                                   │
-    │  GPIO 16 (UART2 RX)  <──────────┼────────┤  PA2 (USART2 TX)                  │
-    │                                 │        │                                   │
-    │  GND                 ───────────┼────────┤  GND (Chung Mass)                 │
-    └─────────────────────────────────┘        └───────────────────────────────────┘
-```
-
-#### Bảng tra cứu chân kết nối (Pinout Table):
-| ESP32 Pin | Hướng tín hiệu | STM32F407 Pin | Chức năng STM32 | Cấu hình UART |
-| :--- | :---: | :--- | :--- | :--- |
-| **GPIO 17** (TX2) | $\longrightarrow$ | **PA3** | USART2_RX | 115200 bps, 8N1 |
-| **GPIO 16** (RX2) | $\longleftarrow$ | **PA2** | USART2_TX | 115200 bps, 8N1 |
-| **GND** | $\longleftrightarrow$ | **GND** | Ground | Chung mass |
-
-#### Phân bổ 3 cổng UART trên STM32F407:
-* **USART1 (PA9 TX / PA10 RX):** Dành riêng cho Module GPS ATGM336H (9600 / 115200 bps).
-* **USART2 (PA2 TX / PA3 RX):** Giao tiếp điều khiển & Telemetry với ESP32.
-* **USART3 (PB10 TX / PB11 RX):** Cổng USART_DEBUG để in log/debug lên PC.
+Hệ thống được chia làm 2 khối xử lý chính:
+1. **STM32 (Core Controller)**: Chịu trách nhiệm đọc cảm biến (GPS, La bàn, IMU, Nhiệt độ), tính toán thuật toán dẫn đường tự động (PID Navigation) và điều khiển động cơ.
+2. **ESP32 (Communication & Dashboard)**: Hoạt động như một trạm phát WiFi (Access Point), cung cấp giao diện Web trực quan (Dashboard) cho phép người dùng giám sát từ xa và điều khiển tàu bằng điện thoại/máy tính mà không cần Internet.
 
 ---
 
-### B. Kết nối khi dùng ESP32 Giả lập (Simulator - Board to Board)
-Khi chưa gắn STM32 thật, có thể dùng 1 board ESP32 thứ 2 nạp code `STM32_Gialap.ino` để test toàn bộ giao diện Web Dashboard:
+## 🌟 Chức năng chính
 
-| ESP32 (Dashboard) | Hướng | ESP32 (Giả lập STM32) | Ghi chú |
-| :--- | :---: | :--- | :--- |
-| **GPIO 17** (TX2) | $\longrightarrow$ | **GPIO 16** (RX2) | Đấu chéo TX - RX |
-| **GPIO 16** (RX2) | $\longleftarrow$ | **GPIO 17** (TX2) | Đấu chéo RX - TX |
-| **GND** | $\longleftrightarrow$ | **GND** | Chung mass |
-
----
-
-## 2. Đặc tả giao thức UART (Frame Overview)
-
-Tất cả các gói tin đều sử dụng định dạng chuỗi ký tự ASCII, phân tách các trường bằng dấu gạch đứng **`|`** và kết thúc khung bằng ký tự xuống dòng **`\n`**.
-
-| Hướng truyền | Loại Frame | Định dạng / Ví dụ (ASCII) | Ký tự kết thúc |
-| :--- | :--- | :--- | :---: |
-| **ESP32 $\rightarrow$ STM32** | **Lệnh điều khiển** | `MOTOR\|60\|-30\n` | `\n` |
-| | **Dừng khẩn cấp** | `STOP\n` | `\n` |
-| | **Bắt đầu tự hành**| `AUTO_START\n` | `\n` |
-| | **Dừng tự hành** | `AUTO_STOP\n` | `\n` |
-| | **Chuyển chế độ** | `MODE\|MANUAL\n` hoặc `MODE\|AUTO\n` | `\n` |
-| | **Cài Waypoint** | `WAYPOINT\|21.028511\|105.804817\n` | `\n` |
-| | **Rải thức ăn** | `FEED\|3000\n` *(thời gian ms)* | `\n` |
-| **STM32 $\rightarrow$ ESP32** | **Telemetry (STATUS)** | `STATUS\|21.028511\|105.804817\|90.0\|1.20\|11.40\|2.50\|28.5\|95\|MANUAL\|1\n` | `\n` |
-| | **Báo lỗi (ERROR)** | `ERROR\|INVALID_PARAMETER\n` | `\n` |
+- **Chế độ điều khiển bằng tay (Manual)**: Điều khiển hai động cơ trái/phải thông qua giao diện Web.
+- **Chế độ tự hành (Auto Navigation)**: Tự động di chuyển bám theo góc hướng (Heading) sử dụng bộ điều khiển PID kết hợp giữa GPS và La bàn điện tử.
+- **Giám sát dữ liệu theo thời gian thực**: Xem trực tiếp các thông số tọa độ (Lat/Lon), vận tốc, góc hướng, nhiệt độ nước, điện áp pin và dòng điện tiêu thụ.
+- **Cơ cấu nhả mồi/thức ăn**: Điều khiển động cơ bước (Stepper) để rải thức ăn trong một khoảng thời gian nhất định (`FEED`).
+- **Giao diện Web nhúng**: Không cần cài App, chỉ cần kết nối WiFi của ESP32 và mở trình duyệt web.
 
 ---
 
-## 3. Chi tiết các trường dữ liệu
+## 🔌 Sơ đồ đấu nối chân (Pinout & Wiring)
 
-### A. Lệnh từ ESP32 gửi xuống STM32
-- `STOP`: Dừng lập tức cả 2 động cơ (PWM = 0).
-- `AUTO_START`: Chuyển sang chế độ chạy tự động theo Waypoint (yêu cầu GPS hợp lệ và đã có Waypoint).
-- `AUTO_STOP`: Dừng tự hành, trả hệ thống về chế độ điều khiển thủ công (`MANUAL`).
-- `MODE|<MANUAL|AUTO>`: Ép chế độ hoạt động.
-- `MOTOR|<left>|<right>`: Công suất động cơ trái / phải (dải giá trị: `-100` đến `100`).
-- `WAYPOINT|<lat>|<lon>`: Toạ độ điểm đích (Lat: `-90` đến `90`, Lon: `-180` đến `180`).
-- `FEED|<timeMs>`: Kích hoạt cơ cấu rải thức ăn trong khoảng thời gian `timeMs` (từ `1` đến `10000` ms).
-
-### B. Dữ liệu trạng thái từ STM32 gửi lên ESP32 (`STATUS`)
-Cú pháp:
-```text
-STATUS|<lat>|<lon>|<heading>|<speed>|<battery>|<current>|<temp>|<feed>|<mode>|<gps>\n
-```
-
-| Trường (Field) | Kiểu dữ liệu | Đơn vị / Ý nghĩa |
+### 1. Giao tiếp giữa STM32 và ESP32 (UART)
+Sử dụng cổng USART2 trên STM32 và Hardware Serial 2 trên ESP32. Tốc độ Baudrate: **115200**.
+| STM32 (USART2) | ESP32 (Serial 2) | Chức năng |
 | :--- | :--- | :--- |
-| **lat** | float (6 số thập phân) | Vĩ độ hiện tại (Latitude) |
-| **lon** | float (6 số thập phân) | Kinh độ hiện tại (Longitude) |
-| **heading** | float (1 số thập phân) | Hướng la bàn từ trường (0° - 359.9°) |
-| **speed** | float (2 số thập phân) | Tốc độ di chuyển ước tính (m/s) |
-| **battery** | float (2 số thập phân) | Điện áp nguồn Pin (V) |
-| **current** | float (2 số thập phân) | Dòng tiêu thụ tổng (A) |
-| **temp** | float (1 số thập phân) | Nhiệt độ nước từ cảm biến DS18B20 (°C) |
-| **feed** | int | Phần trăm thức ăn còn lại trong khoang (0 - 100%) |
-| **mode** | string | Chế độ hiện tại: `MANUAL` hoặc `AUTO` |
-| **gps** | int (0 hoặc 1) | Trạng thái GPS (1 = Fix hợp lệ, 0 = Mất tín hiệu) |
+| **PA2 (TX)** | RX (Pin 16) | Truyền dữ liệu trạng thái từ STM32 lên ESP32 |
+| **PA3 (RX)** | TX (Pin 17) | Nhận lệnh điều khiển từ ESP32 xuống STM32 |
+| GND | GND | Nối chung mass (Bắt buộc) |
 
-*Tần suất gửi khuyến nghị:* Gửi định kỳ **500ms / lần** (`STATUS_INTERVAL = 500`).
+*(Lưu ý: Cổng USART3 (PB10 - TX, PB11 - RX) trên STM32 được dành riêng cho việc Debug log lên máy tính).*
 
-### C. Gói tin báo lỗi (`ERROR`)
-Cú pháp: `ERROR|<MÃ_LỖI>\n`
-- `GPS_INVALID`: Chưa bắt được tín hiệu GPS khi bấm kích hoạt tự hành.
-- `INVALID_STATE`: Trạng thái không hợp lệ (ví dụ chưa cài Waypoint mà bật Auto).
-- `INVALID_PARAMETER`: Tham số vượt ngưỡng cho phép (ví dụ tốc độ động cơ ngoài dải [-100, 100]).
-- `BUFFER_OVERFLOW`: Bộ đệm nhận UART bị đầy (>200 bytes).
-- `UNKNOWN_COMMAND`: Lệnh không xác định.
+### 2. Các cảm biến trên mạch STM32
+| Modun / Cảm biến | Chuẩn Giao Tiếp | Chân kết nối trên STM32 | Chức năng |
+| :--- | :--- | :--- | :--- |
+| **GPS (ATGM336H)** | UART (USART1) | **PA9 (TX) / PA10 (RX)** | Lấy tọa độ kinh độ, vĩ độ và vận tốc |
+| **IMU (MPU6050)** | I2C (I2C1) | **PB8 (SCL) / PB9 (SDA)** | Đo gia tốc và độ nghiêng của tàu |
+| **Compass (QMC5883L)** | I2C (I2C1) | **PB8 (SCL) / PB9 (SDA)** | Đo từ trường, xác định góc hướng (Heading) |
+| **DS18B20** | 1-Wire (GPIO) | **PE11** | Đo nhiệt độ nước (chuẩn chống nước) |
+| **Loadcell (HX711)** | GPIO | **PB12 (DATA) / PB13 (SCK)** | Cảm biến cân đo tải trọng |
+
+### 3. Động cơ và Cơ cấu chấp hành (STM32)
+| Cơ cấu | Chân kết nối trên STM32 | Cổng điều khiển | Chức năng |
+| :--- | :--- | :--- | :--- |
+| **Động cơ Trái (Left Motor)** | **PB6** | PWM (TIM4_CH1) | Điều khiển chân vịt trái |
+| **Động cơ Phải (Right Motor)** | **PB7** | PWM (TIM4_CH2) | Điều khiển chân vịt phải |
+| **Cơ cấu thả thức ăn (Stepper)**| **PD2 (IN1), PD3 (IN2), PD4 (IN3), PD5 (IN4)**| GPIO (Output) | Điều khiển động cơ bước nhả mồi |
 
 ---
 
-## 4. Hướng dẫn lập trình nhận dữ liệu trên STM32 (Thật)
+## 🚀 Hướng dẫn sử dụng
 
-Để STM32 nhận dữ liệu UART từ ESP32 mà không bị treo chương trình điều khiển:
-1. **Khuyến nghị dùng DMA với sự kiện ngắt rảnh (Idle Line Interrupt):**
-   ```c
-   // Kích hoạt nhận dữ liệu UART3 bằng DMA với Idle detection
-   HAL_UARTEx_ReceiveToIdle_DMA(&huart3, rxDmaBuffer, RX_BUFFER_SIZE);
-   ```
-2. **Callback xử lý khi nhận xong 1 gói:**
-   Trong hàm `HAL_UARTEx_RxEventCallback(...)`, kiểm tra ký tự cuối `\n` và phân tích lệnh tương tự bộ bóc tách chuỗi.
+### Bước 1: Khởi động hệ thống
+- Cấp nguồn cho hệ thống. Đợi khoảng vài giây để STM32 và ESP32 khởi động và cấu hình các cảm biến.
+- Đảm bảo GPS đã bắt được vệ tinh (đèn nhấp nháy hoặc biến `gps` báo VALID).
+
+### Bước 2: Kết nối với Web Dashboard
+1. Dùng điện thoại/máy tính dò tìm mạng WiFi do tàu phát ra.
+   - **Tên WiFi (SSID)**: `USV_MINI`
+   - **Mật khẩu**: `12345678`
+2. Mở trình duyệt Web (Chrome, Safari...) và truy cập vào địa chỉ IP mặc định của ESP32: 
+   - 👉 **http://192.168.4.1**
+3. Màn hình Dashboard sẽ hiện lên hiển thị toàn bộ thông số của tàu.
+
+### Bước 3: Điều khiển tàu
+- **Mode MANUAL**: Bấm các phím `+` / `-` ở mục Motor Control để tăng giảm tốc độ chân vịt, hoặc bấm `STOP` để dừng khẩn cấp.
+- **Mode AUTO**: Bấm nút `AUTO`, sau đó nhấn `AUTO START`. Tàu sẽ tự động di chuyển theo thuật toán trong file `nav.c`.
+- **Feed**: Bấm `FEED 500 ms` để kích hoạt motor xả thức ăn.
+
+---
+
+## 🛠 Cấu trúc mã nguồn
+
+- `STM32_Firmware/`: Chứa toàn bộ source code của bộ điều khiển trung tâm (C/C++ viết bằng STM32CubeIDE).
+  - `Core/Src/main.c`: Vòng lặp chính, đọc cảm biến và gửi/nhận chuỗi UART.
+  - `Core/Src/nav.c`: Thuật toán bám quỹ đạo (Navigation).
+  - `Core/Src/motor.c`, `stepper.c`: Xử lý tín hiệu động cơ.
+- `ESP32_Firmware/`: Code của trạm phát WiFi và Web Dashboard (viết bằng PlatformIO / Arduino framework).
+  - `src/main.cpp`: Chứa code tạo Access Point, xử lý giao thức HTTP, định nghĩa giao diện HTML/CSS, và giao tiếp UART.
+  - `src/config.h`: Cấu hình tên WiFi, mật khẩu và chân UART.

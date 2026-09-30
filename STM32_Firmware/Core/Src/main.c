@@ -1,29 +1,85 @@
+/* USER CODE BEGIN Header */
+/**
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "ds18b20.h"
 #include "gpio.h"
 #include "i2c.h"
-#include "qmc5883l.h"
 #include "tim.h"
 #include "usart.h"
-#include <mpu6050.h>
 
-#include <stdio.h>
-#include <math.h>
-#include "atgm336.h"
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+#include "atgm336h/atgm336.h"
+#include "ds18b20/ds18b20.h"
 #include "esp32_comm.h"
+#include "mpu6050/mpu6050.h"
+#include "qmc5883l.h"
+#include <math.h>
+#include <stdio.h>
 
-void SystemClock_Config(void);
+/* USER CODE END Includes */
 
-void MPU6050_SendToUART();
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+/* USER CODE END PTD */
 
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+
+/* USER CODE BEGIN PV */
 ATGM336H_Data_t gps_data;
 uint8_t gps_rx_data;
+/* USER CODE END PV */
 
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+/* USER CODE BEGIN PFP */
+void MPU6050_SendToUART(MPU6050_Data_t *data);
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+/* USER CODE END 0 */
+
+/**
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void) {
+
+  /* USER CODE BEGIN 1 */
+
+  /* USER CODE END 1 */
+
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick.
+   */
   HAL_Init();
 
-  /* Configure the system clock first */
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
   SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
@@ -31,29 +87,35 @@ int main(void) {
   MX_TIM1_Init();
   MX_TIM4_Init();
   MX_USART1_UART_Init();
-  MX_USART2_UART_Init();
   MX_USART3_UART_Init();
-
+  MX_USART2_UART_Init();
+  /* USER CODE BEGIN 2 */
   /* MPU6050 và QMC5883L init must be after I2C init and SystemClock_Config */
   MPU6050_Init();
   QMC5883L_Init();
   DS18B20_Init();
   DS18B20_Request_Temp(); // Bắt đầu quá trình đo nhiệt độ đầu tiên
 
-  /* USER CODE BEGIN 2 */
+  extern void MX_Stepper_GPIO_Init(void);
+  MX_Stepper_GPIO_Init();
+
   ATGM336H_Init(&gps_data);
   HAL_UART_Receive_IT(&huart1, &gps_rx_data, 1);
   ESP32Comm_Init(&huart2);
+
   /* USER CODE END 2 */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   uint32_t last_status_tick = 0;
   uint32_t last_temp_req = 0;
 
   while (1) {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
     MPU6050_Data_t imu = {0};
     QMC5883L_Data_t mag = {0};
-    /* USER CODE END WHILE */
 
     /* 1. Đọc dữ liệu cảm biến */
     MPU6050_ReadRaw(&imu);
@@ -82,15 +144,13 @@ int main(void) {
     /* 5. Xử lý lệnh nhận được từ ESP32 */
     ESP32Comm_Process();
 
-    /* 6. Định kỳ 500ms gửi STATUS lên ESP32 Web Dashboard */
+    /* 6. Định kỳ 50ms gửi STATUS lên ESP32 Web Dashboard */
     if (HAL_GetTick() - last_status_tick >= 500) {
       last_status_tick = HAL_GetTick();
       ESP32Comm_SendStatus();
     }
 
-    HAL_Delay(10);
-
-    /* USER CODE BEGIN 3 */
+    HAL_Delay(500);
   }
   /* USER CODE END 3 */
 }
@@ -139,21 +199,6 @@ void SystemClock_Config(void) {
 }
 
 /* USER CODE BEGIN 4 */
-void MPU6050_SendToUART(MPU6050_Data_t *data) {
-  char txBuffer[150]; // Tạo một mảng bộ đệm chứa chuỗi ký tự
-
-  // 1. In dữ liệu đã convert ra đơn vị thực tế (float)
-  // Gia tốc: đơn vị g, Gyro: đơn vị deg/s
-  int len = sprintf(txBuffer,
-                    "ACC (g): X=%.2f, Y=%.2f, Z=%.2f | GYRO (deg/s): X=%.2f, "
-                    "Y=%.2f, Z=%.2f\r\n",
-                    data->Ax, data->Ay, data->Az, data->Gx, data->Gy, data->Gz);
-
-  // 2. Lệnh của STM32 để đẩy toàn bộ chuỗi ký tự này ra cổng UART3
-  // Thời gian chờ tối đa (timeout) là 100ms
-  HAL_UART_Transmit(&huart3, (uint8_t *)txBuffer, len, 100);
-}
-
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART1) {
     ATGM336H_ProcessChar((char)gps_rx_data, &gps_data);

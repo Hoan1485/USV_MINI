@@ -158,7 +158,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     PA2     ------> USART2_TX
     PA3     ------> USART2_RX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
+    GPIO_InitStruct.Pin = ESP_TX_Pin|ESP_RX_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -183,7 +183,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     PB10     ------> USART3_TX
     PB11     ------> USART3_RX
     */
-    GPIO_InitStruct.Pin = USART_DEBUG_TX_Pin|USART_DEBUG_RX_Pin;
+    GPIO_InitStruct.Pin = GEBUG_TX_Pin|DEBUG_RX_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -230,7 +230,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     PA2     ------> USART2_TX
     PA3     ------> USART2_RX
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_2|GPIO_PIN_3);
+    HAL_GPIO_DeInit(GPIOA, ESP_TX_Pin|ESP_RX_Pin);
 
   /* USER CODE BEGIN USART2_MspDeInit 1 */
     HAL_NVIC_DisableIRQ(USART2_IRQn);
@@ -248,7 +248,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     PB10     ------> USART3_TX
     PB11     ------> USART3_RX
     */
-    HAL_GPIO_DeInit(GPIOB, USART_DEBUG_TX_Pin|USART_DEBUG_RX_Pin);
+    HAL_GPIO_DeInit(GPIOB, GEBUG_TX_Pin|DEBUG_RX_Pin);
 
   /* USER CODE BEGIN USART3_MspDeInit 1 */
     HAL_NVIC_DisableIRQ(USART3_IRQn);

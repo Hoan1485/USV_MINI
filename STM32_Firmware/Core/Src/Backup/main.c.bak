@@ -1,0 +1,238 @@
+#include "main.h"
+/* USER CODE BEGIN Includes */
+#include "atgm336.h" // Thư viện GPS
+#include "comm.h"    // Thư viện giao tiếp với ESP32
+#include "ds18b20.h" // Thư viện cảm biến nhiệt độ nước
+#include "gpio.h"
+#include "i2c.h"
+#include "motor.h"    // Thư viện điều khiển động cơ chân vịt
+#include "nav.h"      // Thư viện thuật toán dẫn đường tự động
+#include "qmc5883l.h" // Thư viện la bàn điện tử
+#include "stepper.h"  // Thư viện điều khiển động cơ bước (thả mồi)
+#include "tim.h"
+#include "usart.h"
+#include <math.h>
+#include <mpu6050.h> // Thư viện cảm biến góc nghiêng/gia tốc
+#include <stdio.h>
+
+/* USER CODE END Includes */
+
+/* USER CODE BEGIN PFP */
+void SystemClock_Config(void);
+void Control_Motor(int left_speed, int right_speed);
+void Debug_TxData(float lat, float lon, float heading, float temp, float speed,
+                  MPU6050_Data_t *imu);
+/* USER CODE END PFP */
+
+/* USER CODE BEGIN PV */
+// Biến lưu trữ dữ liệu GPS (tọa độ, tốc độ...)
+ATGM336H_Data_t gps_data;
+// Biến nhận từng ký tự từ GPS
+uint8_t gps_rx_data;
+
+// Bộ điều khiển PID cho việc giữ hướng (Heading)
+// Các thông số Kp=5.0, Ki=0.0, Kd=1.0 (Có thể cần tinh chỉnh thêm khi chạy thực
+// tế)
+PID_Controller heading_pid = {5.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+/* USER CODE END PV */
+
+int main(void) {
+  // Khởi tạo thư viện HAL (phần cứng cơ bản của STM32)
+  HAL_Init();
+
+  // Cấu hình xung nhịp hệ thống (Tốc độ chạy của chip)
+  SystemClock_Config();
+
+  // Khởi tạo các ngoại vi (Chân cắm, I2C, Timer, UART...)
+  MX_GPIO_Init();
+  MX_I2C1_Init();
+  MX_TIM1_Init();
+  MX_TIM4_Init();
+  MX_USART1_UART_Init();
+  MX_USART2_UART_Init();
+  MX_USART3_UART_Init();
+
+  /* USER CODE BEGIN 2 */
+  // Khởi tạo các cảm biến I2C (Bắt buộc phải khởi tạo SAU KHI I2C đã sẵn sàng)
+  init_mpu6050();        // Cảm biến nghiêng
+  QMC5883L_Init();       // La bàn
+  init_ds18b20();        // Cảm biến nhiệt độ
+  request_temperature(); // Yêu cầu cảm biến đo nhiệt độ lần đầu tiên
+
+  // Khởi tạo GPS
+  init_gps(&gps_data);
+  // Bắt đầu lắng nghe dữ liệu từ GPS qua cổng UART1 (ngắt)
+  HAL_UART_Receive_IT(&huart1, &gps_rx_data, 1);
+
+  // Khởi tạo điều khiển động cơ
+  motor_init();
+
+  // Quan trọng: Khởi động ESC (Arming)
+  // Các ESC thường yêu cầu tín hiệu ở mức trung bình (1500us) trong vài giây
+  // khi mới bật điện để xác định điểm dừng trước khi cho phép động cơ quay.
+  motor_set_speed(1500, 1500);
+  HAL_Delay(3000); // Chờ 3 giây để ESC khởi động hoàn tất
+
+  // Khởi tạo giao tiếp với ESP32
+  Comm_Init();
+
+  // Biến đếm thời gian để gửi dữ liệu lên ESP32 mỗi giây
+  uint32_t last_telemetry_time = 0;
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1) {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+    // Tạo cấu trúc chứa dữ liệu cảm biến
+    MPU6050_Data_t imu = {0};
+    QMC5883L_Data_t mag = {0};
+
+    // 1. ĐỌC DỮ LIỆU CẢM BIẾN
+    read_mpu6050_data(&imu);                 // Đọc độ nghiêng
+    QMC5883L_ReadRaw(&mag);                  // Đọc la bàn từ trường
+    float ds18b20_temp = read_temperature(); // Đọc kết quả nhiệt độ nước
+    request_temperature(); // Yêu cầu cảm biến chuẩn bị đo cho vòng lặp tiếp
+                           // theo
+
+    // Tính toán góc Hướng (Heading) dựa trên dữ liệu la bàn trục X và Y
+    // Công thức tính arctan ra radian, nhân 180/Pi để đổi ra độ
+    float heading = atan2f(mag.My, mag.Mx) * 180.0f / 3.14159265f;
+    if (heading < 0)
+      heading += 360.0f; // Đảm bảo góc luôn từ 0 đến 360 độ
+
+    // Kiểm tra An Toàn (Failsafe)
+    Comm_CheckFailsafe();
+
+    // 2. LOGIC ĐIỀU KHIỂN TÀU
+    // Nếu đang ở chế độ điều khiển bằng tay (từ điện thoại)
+    if (current_mode == MODE_MANUAL) {
+      // Điều khiển tốc độ trực tiếp bằng các biến được ESP32 cập nhật
+      motor_set_speed(manual_left_speed, manual_right_speed);
+    }
+    // Nếu đang ở chế độ Tự Động (Lái theo GPS tới điểm đến)
+    else if (current_mode == MODE_AUTO) {
+      // Nếu GPS đã chốt được vị trí (bắt được sóng vệ tinh)
+      if (gps_data.valid) {
+        // Gọi thuật toán tính toán góc bẻ lái để đi tới mục tiêu
+        auto_control_boat(gps_data.latitude, gps_data.longitude, heading,
+                          target_waypoint_lat, target_waypoint_lon);
+      } else {
+        // Nếu mất sóng GPS, cho tàu dừng lại ngay lập tức để an toàn (1500 là
+        // đứng im)
+        motor_set_speed(1500, 1500);
+      }
+    }
+
+    // 3. GỬI DỮ LIỆU LÊN MẠNG (Mỗi 1 giây = 1000 mili giây)
+    if (HAL_GetTick() - last_telemetry_time > 1000) {
+      last_telemetry_time = HAL_GetTick(); // Cập nhật mốc thời gian
+      // Gọi hàm gửi gói tin lên ESP32
+      Comm_SendTelemetry(gps_data.latitude, gps_data.longitude, heading,
+                         ds18b20_temp, gps_data.speed_kph);
+    }
+
+    // Tốc độ của vòng lặp: Nghỉ 50ms (Tương đương với việc chạy 20 lần 1 giây =
+    // 20Hz)
+    HAL_Delay(500);
+    Debug_TxData(gps_data.latitude, gps_data.longitude, heading, ds18b20_temp,
+                 gps_data.speed_kph, &imu);
+    Control_Motor(1800, 1800);
+    HAL_Delay(2000);
+  }
+
+  /* USER CODE END 3 */
+}
+
+/**
+ * @brief Cấu hình Clock hệ thống (Phần này do CubeMX tự sinh ra)
+ */
+void SystemClock_Config(void) {
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 168;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+    Error_Handler();
+  }
+
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
+                                RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
+    Error_Handler();
+  }
+}
+
+/* USER CODE BEGIN 4 */
+// Hàm gửi TẤT CẢ dữ liệu qua USART3 (Dùng để kiểm tra lỗi - Debug trên máy
+// tính)
+void Debug_TxData(float lat, float lon, float heading, float temp, float speed,
+                  MPU6050_Data_t *imu) {
+  char txBuffer[256];
+
+  // Gộp tất cả thông tin thành một đoạn văn bản dễ đọc
+  int len = sprintf(txBuffer,
+                    "\r\n--- THONG SO TAU ---\r\n"
+                    "GPS: Vi do = %.6f, Kinh do = %.6f, Toc do= %.1f km/h\r\n"
+                    "La ban (Heading): %.1f do\r\n"
+                    "Nhiet do nuoc: %.1f C\r\n"
+                    "MPU6050: Gx = %.1f, Gy = %.1f, Gz = %.1f\r\n"
+                    "--------------------\r\n",
+                    lat, lon, speed, heading, temp, imu->Gx, imu->Gy, imu->Gz);
+
+  // Đẩy chuỗi ký tự này ra cổng UART3 để hiển thị lên màn hình máy tính
+  HAL_UART_Transmit(&huart3, (uint8_t *)txBuffer, len, 100);
+}
+
+// Hàm điều khiển tốc độ động cơ viết sẵn để bạn dễ dàng gọi ở bất kỳ đâu trong
+// file main.c
+void Control_Motor(int left_speed, int right_speed) {
+  // Lệnh này gọi xuống hàm ở file motor.c
+  motor_set_speed(left_speed, right_speed);
+}
+
+// Hàm ngắt chung của UART, được gọi mỗi khi có dữ liệu đến ở BẤT KỲ cổng UART
+// nào
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+  // Nếu dữ liệu đến từ USART1 (Nối với mạch GPS)
+  if (huart->Instance == USART1) {
+    // Đưa chữ cái vừa nhận vào hàm xử lý GPS
+    process_gps_char((char)gps_rx_data, &gps_data);
+    // Kích hoạt lại ngắt để nhận chữ cái GPS tiếp theo
+    HAL_UART_Receive_IT(&huart1, &gps_rx_data, 1);
+  }
+
+  // Gọi hàm ngắt của file giao tiếp (để xử lý dữ liệu từ ESP32 trên UART3)
+  extern void Comm_UART_RxCpltCallback(UART_HandleTypeDef * huart);
+  Comm_UART_RxCpltCallback(huart);
+}
+/* USER CODE END 4 */
+
+void Error_Handler(void) {
+  __disable_irq(); // Tắt toàn bộ ngắt nếu gặp lỗi nghiêm trọng
+  while (1) {
+    // Vòng lặp kẹt ở đây để lập trình viên biết có lỗi
+  }
+}
+
+#ifdef USE_FULL_ASSERT
+void assert_failed(uint8_t *file, uint32_t line) {}
+#endif /* USE_FULL_ASSERT */

@@ -1,0 +1,133 @@
+#include "comm.h"
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include "usart.h"
+#include "stepper.h"
+
+// Biến lưu trạng thái hiện tại của tàu (điều khiển bằng tay hay tự động)
+BoatMode current_mode = MODE_MANUAL; // Mặc định là điều khiển bằng tay (Manual)
+
+// Tọa độ điểm đến (Latitude - vĩ độ, Longitude - kinh độ)
+float target_waypoint_lat = 0.0f;
+float target_waypoint_lon = 0.0f;
+uint8_t new_waypoint_flag = 0; // Cờ báo hiệu có điểm đến mới
+
+// Tốc độ động cơ ở chế độ Manual (1500 là đứng yên)
+int manual_left_speed = 1500;
+int manual_right_speed = 1500;
+
+// Cấu hình bộ nhớ đệm (buffer) để nhận lệnh
+#define RX_CMD_MAX_LEN 64 // Chiều dài tối đa của một câu lệnh là 64 ký tự
+char rx_cmd_buffer[RX_CMD_MAX_LEN]; // Mảng lưu các chữ cái nhận được
+uint8_t rx_byte; // Biến lưu 1 chữ cái (1 byte) vừa nhận được
+int rx_index = 0; // Vị trí hiện tại trong mảng
+
+// Biến lưu thời gian nhận lệnh cuối cùng (dùng cho tính năng An Toàn Failsafe)
+uint32_t last_cmd_time = 0;
+
+// Hàm khởi tạo giao tiếp
+void Comm_Init(void) {
+    // Kích hoạt chức năng ngắt UART2 để lắng nghe dữ liệu từ ESP32
+    // Khi nào ESP32 gửi 1 chữ cái xuống, hàm ngắt (callback) sẽ tự động chạy
+    extern UART_HandleTypeDef huart2;
+    HAL_UART_Receive_IT(&huart2, &rx_byte, 1);
+}
+
+// Hàm giải mã lệnh nhận được từ ESP32 (từ điện thoại)
+void Comm_ParseCommand(char *cmd) {
+    // Cập nhật lại thời gian vừa nhận lệnh (Reset bộ đếm Failsafe)
+    last_cmd_time = HAL_GetTick();
+
+    // Nếu lệnh bắt đầu bằng "CMD,MODE," (Thay đổi chế độ)
+    if (strncmp(cmd, "CMD,MODE,", 9) == 0) {
+        int mode = atoi(cmd + 9); // Lấy con số đằng sau dấu phẩy
+        // Nếu số là 1 thì chuyển sang Tự động (AUTO), nếu không thì Bằng tay (MANUAL)
+        current_mode = (mode == 1) ? MODE_AUTO : MODE_MANUAL;
+    }
+    // Nếu lệnh bắt đầu bằng "CMD,WP," (Waypoint - Đặt điểm đến mới)
+    else if (strncmp(cmd, "CMD,WP,", 7) == 0) {
+        char *lat_str = cmd + 7; // Lấy chuỗi chữ số của Vĩ độ
+        char *lon_str = strchr(lat_str, ','); // Tìm dấu phẩy tiếp theo để tách Kinh độ
+        if (lon_str != NULL) {
+            *lon_str = '\0'; // Cắt chuỗi tại dấu phẩy
+            lon_str++;       // Bỏ qua dấu phẩy để đến phần chữ số của Kinh độ
+            
+            // Chuyển chuỗi chữ thành số thập phân (float)
+            target_waypoint_lat = atof(lat_str);
+            target_waypoint_lon = atof(lon_str);
+            new_waypoint_flag = 1; // Bật cờ báo có mục tiêu mới
+        }
+    }
+    // Nếu lệnh là "CMD,FEED" (Cho cá ăn / Rải mồi)
+    else if (strncmp(cmd, "CMD,FEED", 8) == 0) {
+        drop_bait(); // Gọi hàm quay động cơ bước để rải cám
+    }
+    // Nếu lệnh bắt đầu bằng "CMD,SPEED," (Điều khiển tốc độ thủ công)
+    else if (strncmp(cmd, "CMD,SPEED,", 10) == 0) {
+        char *l_str = cmd + 10; // Chuỗi tốc độ động cơ trái
+        char *r_str = strchr(l_str, ','); // Tìm dấu phẩy để tách tốc độ động cơ phải
+        if (r_str != NULL) {
+            *r_str = '\0'; // Cắt chuỗi
+            r_str++;
+            
+            // Chuyển chuỗi chữ thành số nguyên (int)
+            manual_left_speed = atoi(l_str);
+            manual_right_speed = atoi(r_str);
+        }
+    }
+    // Nếu lệnh là "CMD,PING" (Heartbeat từ ESP32)
+    else if (strncmp(cmd, "CMD,PING", 8) == 0) {
+        // Không cần làm gì thêm, bộ đếm last_cmd_time đã được reset ở trên cùng
+    }
+}
+
+// Hàm kiểm tra An Toàn (Failsafe)
+// Nếu quá 3 giây không nhận được lệnh nào từ ESP32, ép tàu dừng lại
+void Comm_CheckFailsafe(void) {
+    // Chờ 3000ms = 3 giây
+    if (HAL_GetTick() - last_cmd_time > 3000) {
+        current_mode = MODE_MANUAL;
+        manual_left_speed = 1500; // 1500 là tốc độ dừng
+        manual_right_speed = 1500;
+    }
+}
+
+// Hàm gửi dữ liệu (Telemetry) từ STM32 lên ESP32
+void Comm_SendTelemetry(float lat, float lon, float heading, float temp, float speed) {
+    char txBuffer[100]; // Mảng chứa chuỗi tin nhắn sẽ gửi đi
+    
+    // Ghép các con số thành một câu hoàn chỉnh có cấu trúc: TEL,vĩ_độ,kinh_độ,góc_hướng,nhiệt_độ,tốc_độ
+    int len = sprintf(txBuffer, "TEL,%.6f,%.6f,%.1f,%.1f,%.1f\n", lat, lon, heading, temp, speed);
+    
+    // Gửi chuỗi này qua UART2 (nối với ESP32)
+    extern UART_HandleTypeDef huart2;
+    HAL_UART_Transmit(&huart2, (uint8_t*)txBuffer, len, 100);
+}
+
+// Hàm ngắt (Callback) được tự động gọi mỗi khi nhận được 1 chữ cái qua UART
+void Comm_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    // Nếu nhận từ cổng UART2 (Cổng nối với ESP32)
+    if (huart->Instance == USART2) {
+        // Nếu chữ cái nhận được là dấu "Xuống dòng" (Kết thúc 1 câu)
+        if (rx_byte == '\n' || rx_byte == '\r') {
+            rx_cmd_buffer[rx_index] = '\0'; // Đánh dấu kết thúc chuỗi chữ
+            
+            // Nếu chuỗi không bị rỗng
+            if (rx_index > 0) {
+                // Đem chuỗi vừa nhận đi dịch lệnh
+                Comm_ParseCommand(rx_cmd_buffer);
+                rx_index = 0; // Đặt lại vị trí về 0 để chuẩn bị nhận câu tiếp theo
+            }
+        } else {
+            // Nếu chưa xuống dòng thì tiếp tục lưu chữ cái vào mảng
+            if (rx_index < RX_CMD_MAX_LEN - 1) {
+                rx_cmd_buffer[rx_index++] = (char)rx_byte;
+            }
+        }
+        
+        // Kích hoạt lại việc lắng nghe chữ cái tiếp theo (Rất quan trọng!)
+        extern UART_HandleTypeDef huart2;
+        HAL_UART_Receive_IT(&huart2, &rx_byte, 1); 
+    }
+}

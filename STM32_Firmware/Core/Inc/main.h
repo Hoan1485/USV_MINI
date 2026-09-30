@@ -57,12 +57,16 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define ESP_TX_Pin GPIO_PIN_2
+#define ESP_TX_GPIO_Port GPIOA
+#define ESP_RX_Pin GPIO_PIN_3
+#define ESP_RX_GPIO_Port GPIOA
 #define DS18B20_Pin GPIO_PIN_11
 #define DS18B20_GPIO_Port GPIOE
-#define USART_DEBUG_TX_Pin GPIO_PIN_10
-#define USART_DEBUG_TX_GPIO_Port GPIOB
-#define USART_DEBUG_RX_Pin GPIO_PIN_11
-#define USART_DEBUG_RX_GPIO_Port GPIOB
+#define GEBUG_TX_Pin GPIO_PIN_10
+#define GEBUG_TX_GPIO_Port GPIOB
+#define DEBUG_RX_Pin GPIO_PIN_11
+#define DEBUG_RX_GPIO_Port GPIOB
 #define HX711_DATA_Pin GPIO_PIN_12
 #define HX711_DATA_GPIO_Port GPIOB
 #define HX711_SCK_Pin GPIO_PIN_13
@@ -71,6 +75,14 @@ void Error_Handler(void);
 #define USART1_TX_GPS_GPIO_Port GPIOA
 #define USART1_RX_GPS_Pin GPIO_PIN_10
 #define USART1_RX_GPS_GPIO_Port GPIOA
+#define IN1_Pin GPIO_PIN_2
+#define IN1_GPIO_Port GPIOD
+#define IN2_Pin GPIO_PIN_3
+#define IN2_GPIO_Port GPIOD
+#define IN3_Pin GPIO_PIN_4
+#define IN3_GPIO_Port GPIOD
+#define IN4_Pin GPIO_PIN_5
+#define IN4_GPIO_Port GPIOD
 #define PWM_ESC_L_Pin GPIO_PIN_6
 #define PWM_ESC_L_GPIO_Port GPIOB
 #define PWM_ESC_R_Pin GPIO_PIN_7
@@ -81,7 +93,14 @@ void Error_Handler(void);
 #define I2C_SDA_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
-
+#define INT1_Pin GPIO_PIN_2
+#define INT1_GPIO_Port GPIOD
+#define INT2_Pin GPIO_PIN_3
+#define INT2_GPIO_Port GPIOD
+#define INT3_Pin GPIO_PIN_4
+#define INT3_GPIO_Port GPIOD
+#define INT4_Pin GPIO_PIN_5
+#define INT4_GPIO_Port GPIOD
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
