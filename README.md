@@ -21,29 +21,30 @@ Hệ thống được chia làm 2 khối xử lý chính:
 ## 🔌 Sơ đồ đấu nối chân (Pinout & Wiring)
 
 ### 1. Giao tiếp giữa STM32 và ESP32 (UART)
-Sử dụng cổng USART3 trên STM32 và Hardware Serial 2 trên ESP32. Tốc độ Baudrate: **115200**.
+Sử dụng cổng USART2 trên STM32 và Hardware Serial 2 trên ESP32. Tốc độ Baudrate: **115200**.
 | STM32 (USART2) | ESP32 (Serial 2) | Chức năng |
 | :--- | :--- | :--- |
-| TX | RX (Pin 16) | Truyền dữ liệu trạng thái từ STM32 lên ESP32 |
-| RX | TX (Pin 17) | Nhận lệnh điều khiển từ ESP32 xuống STM32 |
+| **PA2 (TX)** | RX (Pin 16) | Truyền dữ liệu trạng thái từ STM32 lên ESP32 |
+| **PA3 (RX)** | TX (Pin 17) | Nhận lệnh điều khiển từ ESP32 xuống STM32 |
 | GND | GND | Nối chung mass (Bắt buộc) |
 
+*(Lưu ý: Cổng USART3 (PB10 - TX, PB11 - RX) trên STM32 được dành riêng cho việc Debug log lên máy tính).*
+
 ### 2. Các cảm biến trên mạch STM32
-| Modun / Cảm biến | Chuẩn Giao Tiếp | Chân kết nối tham khảo trên STM32 | Chức năng |
+| Modun / Cảm biến | Chuẩn Giao Tiếp | Chân kết nối trên STM32 | Chức năng |
 | :--- | :--- | :--- | :--- |
-| **GPS (ATGM336H)** | UART (USART1) | TX1 / RX1 | Lấy tọa độ kinh độ, vĩ độ và vận tốc |
-| **IMU (MPU6050)** | I2C (I2C1) | SCL1 / SDA1 | Đo gia tốc và độ nghiêng của tàu |
-| **Compass (QMC5883L)** | I2C (I2C1) | SCL1 / SDA1 | Đo từ trường, xác định góc hướng (Heading) |
-| **DS18B20** | 1-Wire (GPIO) | 1 Chân GPIO bất kỳ | Đo nhiệt độ nước (chuẩn chống nước) |
+| **GPS (ATGM336H)** | UART (USART1) | **PA9 (TX) / PA10 (RX)** | Lấy tọa độ kinh độ, vĩ độ và vận tốc |
+| **IMU (MPU6050)** | I2C (I2C1) | **PB8 (SCL) / PB9 (SDA)** | Đo gia tốc và độ nghiêng của tàu |
+| **Compass (QMC5883L)** | I2C (I2C1) | **PB8 (SCL) / PB9 (SDA)** | Đo từ trường, xác định góc hướng (Heading) |
+| **DS18B20** | 1-Wire (GPIO) | **PE11** | Đo nhiệt độ nước (chuẩn chống nước) |
+| **Loadcell (HX711)** | GPIO | **PB12 (DATA) / PB13 (SCK)** | Cảm biến cân đo tải trọng |
 
 ### 3. Động cơ và Cơ cấu chấp hành (STM32)
-| Cơ cấu | Cổng điều khiển | Chức năng |
-| :--- | :--- | :--- |
-| **Động cơ Trái (Left Motor)** | PWM (TIM4_CH1) | Điều khiển chân vịt trái |
-| **Động cơ Phải (Right Motor)** | PWM (TIM4_CH2) | Điều khiển chân vịt phải |
-| **Cơ cấu thả thức ăn** | GPIO (Stepper) | Điều khiển động cơ bước nhả mồi |
-
-*(Lưu ý: Bạn có thể thay đổi chi tiết cấu hình chân PWM/GPIO cụ thể trong file `.ioc` của CubeMX tùy theo cách cắm thực tế của phần cứng).*
+| Cơ cấu | Chân kết nối trên STM32 | Cổng điều khiển | Chức năng |
+| :--- | :--- | :--- | :--- |
+| **Động cơ Trái (Left Motor)** | **PB6** | PWM (TIM4_CH1) | Điều khiển chân vịt trái |
+| **Động cơ Phải (Right Motor)** | **PB7** | PWM (TIM4_CH2) | Điều khiển chân vịt phải |
+| **Cơ cấu thả thức ăn (Stepper)**| **PD2 (IN1), PD3 (IN2), PD4 (IN3), PD5 (IN4)**| GPIO (Output) | Điều khiển động cơ bước nhả mồi |
 
 ---
 
