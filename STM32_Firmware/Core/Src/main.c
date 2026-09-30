@@ -15,13 +15,15 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "QM5883P.h"
 #include "atgm336h/atgm336.h"
 #include "ds18b20/ds18b20.h"
 #include "esp32_comm.h"
 #include "mpu6050/mpu6050.h"
-#include "qmc5883l.h"
+#include "stepper.h"
 #include <math.h>
 #include <stdio.h>
+
 
 /* USER CODE END Includes */
 
@@ -90,9 +92,21 @@ int main(void) {
   MX_USART3_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  /* MPU6050 và QMC5883L init must be after I2C init and SystemClock_Config */
-  MPU6050_Init();
-  QMC5883L_Init();
+  /* MPU6050 và QMC5883P init must be after I2C init and SystemClock_Config */
+  printf("Starting I2C Sensors...\r\n");
+
+  if (MPU6050_Init() == HAL_OK) {
+    printf("MPU6050 Init SUCCESS\r\n");
+  } else {
+    printf("MPU6050 Init FAILED\r\n");
+  }
+
+  if (QMC5883P_Init() == HAL_OK) {
+    printf("QMC5883P Init SUCCESS\r\n");
+  } else {
+    printf("QMC5883P Init FAILED\r\n");
+  }
+
   DS18B20_Init();
   DS18B20_Request_Temp(); // Bắt đầu quá trình đo nhiệt độ đầu tiên
 
@@ -115,13 +129,13 @@ int main(void) {
 
     /* USER CODE BEGIN 3 */
     MPU6050_Data_t imu = {0};
-    QMC5883L_Data_t mag = {0};
+    QMC5883P_Data_t mag = {0};
 
     /* 1. Đọc dữ liệu cảm biến */
     MPU6050_ReadRaw(&imu);
-    QMC5883L_ReadRaw(&mag);
+    QMC5883P_ReadRaw(&mag);
 
-    /* 2. Tính góc hướng la bàn (Heading) từ QMC5883L */
+    /* 2. Tính góc hướng la bàn (Heading) từ QMC5883P */
     float heading = atan2f(mag.My, mag.Mx) * 180.0f / 3.14159265f;
     if (heading < 0.0f) {
       heading += 360.0f;
@@ -144,13 +158,14 @@ int main(void) {
     /* 5. Xử lý lệnh nhận được từ ESP32 */
     ESP32Comm_Process();
 
-    /* 6. Định kỳ 50ms gửi STATUS lên ESP32 Web Dashboard */
+    /* 6. Định kỳ 500ms gửi STATUS lên ESP32 Web Dashboard */
     if (HAL_GetTick() - last_status_tick >= 500) {
       last_status_tick = HAL_GetTick();
       ESP32Comm_SendStatus();
     }
 
-    HAL_Delay(500);
+    /* 7. Cập nhật động cơ bước liên tục (non-blocking) */
+    stepper_update();
   }
   /* USER CODE END 3 */
 }

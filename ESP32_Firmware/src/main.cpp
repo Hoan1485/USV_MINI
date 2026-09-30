@@ -61,7 +61,8 @@ void sendCommand(const String &command) {
   STM32Serial.print(command);
   STM32Serial.print('\n');
 
-  // Không in log cổng Serial USB đối với lệnh MOTOR liên tục để tránh nghẽn CPU/UART
+  // Không in log cổng Serial USB đối với lệnh MOTOR liên tục để tránh nghẽn
+  // CPU/UART
   if (!command.startsWith("MOTOR|")) {
     Serial.print("[TX] ");
     Serial.println(command);

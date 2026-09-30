@@ -19,50 +19,52 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     <!-- Font Awesome (Hỗ trợ hiển thị online) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --bg-color: #0b1120;
-            --card-bg: rgba(30, 41, 59, 0.72);
-            --card-border: rgba(255, 255, 255, 0.08);
-            --primary: #38bdf8;
-            --primary-glow: rgba(56, 189, 248, 0.4);
-            --success: #34d399;
-            --success-glow: rgba(52, 211, 153, 0.4);
-            --danger: #fb7185;
-            --danger-glow: rgba(251, 113, 133, 0.4);
-            --warning: #fbbf24;
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
+            --bg: #F3F6F9;
+            --surface: #FFFFFF;
+            --text-main: #1E293B;
+            --text-dim: #64748B;
+            --primary: #2563EB;
+            --primary-light: #EFF6FF;
+            --success: #10B981;
+            --success-light: #ECFDF5;
+            --danger: #EF4444;
+            --danger-light: #FEF2F2;
+            --warning: #F59E0B;
+            --warning-light: #FFFBEB;
+            --border: #E2E8F0;
+            --radius-lg: 20px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.04);
+            --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06);
+            --shadow-lg: 0 10px 25px rgba(15, 23, 42, 0.08);
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             user-select: none;
             -webkit-user-select: none;
         }
 
         body {
-            background-color: var(--bg-color);
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.12) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(52, 211, 153, 0.08) 0px, transparent 50%);
-            background-attachment: fixed;
+            background-color: var(--bg);
             color: var(--text-main);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
             padding: 16px;
+            display: flex;
+            justify-content: center;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 600px;
             width: 100%;
-            margin: 0 auto;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -73,583 +75,368 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: var(--surface);
             padding: 16px 20px;
-            background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
         }
-
+        
         .header-title h1 {
-            font-size: 1.6rem;
+            font-size: 1.3rem;
             font-weight: 800;
-            background: linear-gradient(135deg, var(--primary), var(--success));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: 0.5px;
+            color: var(--primary);
+            letter-spacing: -0.5px;
         }
 
         .header-title p {
+            font-size: 0.8rem;
             color: var(--text-dim);
-            font-size: 0.85rem;
-            margin-top: 3px;
+            margin-top: 2px;
         }
 
         .status-indicator {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 8px 16px;
-            background: rgba(15, 23, 42, 0.6);
+            gap: 8px;
+            background: var(--success-light);
+            color: var(--success);
+            padding: 6px 12px;
             border-radius: 50px;
-            border: 1px solid var(--card-border);
+            font-size: 0.8rem;
             font-weight: 600;
-            font-size: 0.85rem;
         }
 
         .dot {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background-color: var(--danger);
-            box-shadow: 0 0 10px var(--danger);
-            transition: all 0.3s ease;
+            transition: all 0.3s;
         }
-
         .dot.connected {
             background-color: var(--success);
-            box-shadow: 0 0 12px var(--success);
         }
 
-        /* MAIN GRID */
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1.1fr 1fr;
-            gap: 20px;
-        }
-
-        /* CARD CHUNG */
+        /* CARDS */
         .card {
-            background: var(--card-bg);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            padding: 22px;
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-md);
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            gap: 20px;
         }
 
         .card-header {
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            font-size: 1.15rem;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        .card-header .title {
+            font-size: 1.1rem;
             font-weight: 700;
             color: var(--text-main);
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .card-header .title-group {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
-        .card-header svg, .card-header i {
+        .card-header .title i {
             color: var(--primary);
-            width: 20px;
-            height: 20px;
         }
+
+        .badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+        .badge.err { background: var(--danger-light); color: var(--danger); }
+        .badge.ok { background: var(--success-light); color: var(--success); }
+        .badge.primary { background: var(--primary-light); color: var(--primary); }
 
         /* TELEMETRY GRID */
         .telemetry-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
+            gap: 16px;
         }
 
         .data-box {
-            background: rgba(15, 23, 42, 0.55);
-            border-radius: 14px;
-            padding: 14px;
+            background: var(--bg);
+            padding: 16px;
+            border-radius: var(--radius-md);
             display: flex;
             flex-direction: column;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: border-color 0.2s;
-        }
-
-        .data-box:hover {
-            border-color: rgba(56, 189, 248, 0.3);
+            gap: 4px;
         }
 
         .data-label {
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-bottom: 6px;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 6px;
         }
 
         .data-value {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--text-main);
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: var(--primary);
         }
 
-        .data-value.gps-val {
-            font-size: 0.95rem;
-            word-break: break-all;
-        }
+        .data-value.gps-val { font-size: 0.9rem; }
 
-        .status-badge {
-            font-size: 0.7rem;
-            padding: 2px 8px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-family: sans-serif;
-        }
-        .status-badge.ok {
-            background: rgba(52, 211, 153, 0.15);
-            color: var(--success);
-            border: 1px solid rgba(52, 211, 153, 0.3);
-        }
-        .status-badge.err {
-            background: rgba(251, 113, 133, 0.15);
-            color: var(--danger);
-            border: 1px solid rgba(251, 113, 133, 0.3);
-        }
+        .highlight-blue { color: var(--primary); }
+        .highlight-green { color: var(--success); }
+        .highlight-orange { color: var(--warning); }
 
-        /* CONTROLS AREA */
-        .controls-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 18px;
-        }
-
-        /* MODE SWITCH */
+        /* CONTROLS */
         .mode-switch {
             display: flex;
-            background: rgba(15, 23, 42, 0.7);
+            background: var(--bg);
             border-radius: 50px;
             padding: 4px;
-            width: 100%;
-            border: 1px solid var(--card-border);
         }
 
         .mode-btn {
             flex: 1;
-            padding: 10px 16px;
+            padding: 12px;
             border: none;
             background: transparent;
-            color: var(--text-dim);
             border-radius: 50px;
             font-weight: 700;
-            font-size: 0.85rem;
+            color: var(--text-dim);
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: 0.3s;
         }
 
         .mode-btn.active {
-            background: linear-gradient(135deg, var(--primary), #0284c7);
-            color: #0b1120;
-            box-shadow: 0 0 15px var(--primary-glow);
+            background: var(--surface);
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
         }
 
-        /* JOYSTICK STYLES */
-        .joystick-wrapper {
+        /* JOYSTICK */
+        .joystick-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 14px;
-            width: 100%;
+            gap: 20px;
+            margin: 10px 0;
         }
 
         .joystick-zone {
-            position: relative;
             width: 220px;
             height: 220px;
+            background: var(--bg);
             border-radius: 50%;
-            background: radial-gradient(circle at center, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.98) 100%);
-            border: 2px solid rgba(56, 189, 248, 0.35);
-            box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.85), 0 0 20px rgba(56, 189, 248, 0.15);
+            position: relative;
+            box-shadow: inset var(--shadow-sm);
+            border: 2px solid var(--border);
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             touch-action: none;
-            cursor: grab;
         }
 
-        .joystick-zone:active {
-            cursor: grabbing;
-        }
-
-        .joystick-ring {
+        .joystick-axis {
             position: absolute;
-            border-radius: 50%;
-            border: 1px dashed rgba(56, 189, 248, 0.25);
+            background: var(--border);
             pointer-events: none;
         }
-        .joystick-ring.ring-inner { width: 95px; height: 95px; }
-        .joystick-ring.ring-outer { width: 160px; height: 160px; }
-
-        .joystick-axis-x {
-            position: absolute;
-            width: 100%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.25), transparent);
-            pointer-events: none;
-        }
-
-        .joystick-axis-y {
-            position: absolute;
-            height: 100%;
-            width: 1px;
-            background: linear-gradient(180deg, transparent, rgba(56, 189, 248, 0.25), transparent);
-            pointer-events: none;
-        }
-
-        .joystick-label-dir {
-            position: absolute;
-            font-size: 0.7rem;
-            font-weight: 800;
-            color: rgba(148, 163, 184, 0.6);
-            pointer-events: none;
-            letter-spacing: 1px;
-        }
-        .joystick-label-dir.up { top: 8px; }
-        .joystick-label-dir.down { bottom: 8px; }
-        .joystick-label-dir.left { left: 10px; }
-        .joystick-label-dir.right { right: 10px; }
+        .axis-x { width: 100%; height: 2px; }
+        .axis-y { width: 2px; height: 100%; }
 
         .joystick-knob {
+            width: 70px;
+            height: 70px;
+            background: var(--primary);
+            border-radius: 50%;
             position: absolute;
-            width: 74px;
-            height: 74px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 35% 35%, #38bdf8, #0284c7);
-            border: 2px solid rgba(255, 255, 255, 0.65);
-            box-shadow: 0 4px 18px rgba(2, 132, 199, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.22s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            box-shadow: var(--shadow-md), inset 0 2px 4px rgba(255,255,255,0.4);
+            border: 4px solid var(--surface);
+            transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
             pointer-events: none;
-            will-change: transform;
-            touch-action: none;
         }
 
-        .joystick-knob::after {
-            content: '';
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background: rgba(15, 23, 42, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
-        }
-
-        /* LIVE MOTOR READOUT */
         .joystick-stats {
             display: flex;
             gap: 12px;
             width: 100%;
-            justify-content: center;
         }
 
         .stat-badge {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 8px 14px;
-            border-radius: 10px;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
             flex: 1;
-            justify-content: center;
-        }
-        .stat-badge .stat-name {
+            background: var(--bg);
+            padding: 10px;
+            border-radius: var(--radius-md);
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 600;
             color: var(--text-dim);
-            font-size: 0.8rem;
         }
-        .stat-badge .stat-num {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
-            color: var(--primary);
-            font-size: 1rem;
-        }
+        .stat-badge span { color: var(--primary); font-size: 1.1rem; display: block; font-family: monospace;}
 
         /* BUTTONS */
-        .btn-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            width: 100%;
-        }
-
-        .action-btn {
-            padding: 13px 16px;
+        .btn {
+            padding: 16px;
+            border-radius: var(--radius-md);
             border: none;
-            border-radius: 12px;
-            font-size: 0.95rem;
             font-weight: 700;
+            font-size: 1rem;
             cursor: pointer;
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 8px;
-            transition: all 0.2s ease;
+            transition: 0.2s;
         }
-
-        .action-btn:active {
-            transform: scale(0.97);
-        }
+        .btn:active { transform: scale(0.98); }
 
         .btn-stop {
-            width: 100%;
-            background: rgba(251, 113, 133, 0.15);
-            border: 1px solid var(--danger);
-            color: var(--danger);
-            font-size: 1rem;
-            padding: 13px;
-        }
-        .btn-stop:hover, .btn-stop:active {
             background: var(--danger);
-            color: #0b1120;
-            box-shadow: 0 0 16px var(--danger-glow);
+            color: white;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
         }
 
         .btn-feed {
+            background: var(--success);
+            color: white;
             width: 100%;
-            background: linear-gradient(135deg, var(--warning), #f59e0b);
-            color: #0b1120;
-            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.25);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
         }
 
-        .btn-auto-start {
-            background: rgba(56, 189, 248, 0.15);
-            border: 1px solid var(--primary);
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn-outline {
+            background: var(--surface);
+            border: 2px solid var(--primary);
             color: var(--primary);
         }
-        .btn-auto-start:hover, .btn-auto-start:active {
+
+        .btn-fill {
             background: var(--primary);
-            color: #0b1120;
-            box-shadow: 0 0 14px var(--primary-glow);
+            color: white;
         }
 
-        .btn-auto-stop {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: var(--text-dim);
-        }
-        .btn-auto-stop:hover, .btn-auto-stop:active {
-            background: rgba(255, 255, 255, 0.12);
-            color: var(--text-main);
-        }
-
-        /* SYSTEM STATUS FOOTER */
-        .system-banner {
-            padding: 12px 16px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid var(--card-border);
-        }
-
-        /* RESPONSIVE */
-        @media (max-width: 800px) {
-            .main-grid {
-                grid-template-columns: 1fr;
-            }
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 12px;
-            }
-            .status-indicator {
-                align-self: flex-start;
-            }
-        }
-
-        @media (max-width: 480px) {
-            body {
-                padding: 10px;
-            }
-            .telemetry-grid {
-                grid-template-columns: 1fr;
-            }
-            .joystick-zone {
-                width: 200px;
-                height: 200px;
-            }
-        }
     </style>
 </head>
-
 <body>
-<div class="container">
 
+<div class="container">
+    
     <!-- HEADER -->
     <div class="header">
         <div class="header-title">
-            <h1>USV MINI DASHBOARD</h1>
-            <p>Trạm Giám Sát & Điều Khiển Tàu Không Người Lái</p>
+            <h1>USV MINI</h1>
+            <p>Trạm Giám Sát Hành Trình</p>
         </div>
-        <div class="status-indicator">
+        <div class="status-indicator" id="statusBadge">
             <div id="statusDot" class="dot"></div>
-            <span id="statusText">Đang kết nối ESP32...</span>
+            <span id="statusText">Kết nối...</span>
         </div>
     </div>
 
-    <!-- MAIN GRID -->
-    <div class="main-grid">
-
-        <!-- THẺ THÔNG SỐ HÀNH TRÌNH (TELEMETRY) -->
-        <div class="card">
-            <div class="card-header">
-                <div class="title-group">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                    <span>Dữ Liệu Hành Trình</span>
-                </div>
-                <span id="gpsBadge" class="status-badge err">GPS: TÌM VỆ TINH</span>
+    <!-- CARDS -->
+    <div class="card">
+        <div class="card-header">
+            <div class="title">
+                <i class="fa-solid fa-chart-pie"></i> Dữ Liệu Hành Trình
+            </div>
+            <span id="gpsBadge" class="badge err">MẤT GPS</span>
+        </div>
+        
+        <div class="telemetry-grid">
+            <div class="data-box">
+                <span class="data-label"><i class="fa-solid fa-gauge-high"></i> Vận Tốc</span>
+                <span class="data-value highlight-blue" id="valSpeed">0.00 <span style="font-size:0.8rem">m/s</span></span>
+            </div>
+            <div class="data-box">
+                <span class="data-label"><i class="fa-regular fa-compass"></i> Góc Hướng</span>
+                <span class="data-value highlight-blue" id="valHeading">0.0°</span>
+            </div>
+            
+            <div class="data-box" style="grid-column: span 2;">
+                <span class="data-label"><i class="fa-solid fa-location-dot"></i> Tọa độ GPS</span>
+                <span class="data-value gps-val" id="valGPS">---, ---</span>
             </div>
 
-            <div class="telemetry-grid">
-                <!-- Vận tốc -->
-                <div class="data-box">
-                    <span class="data-label">Vận Tốc (m/s)</span>
-                    <span class="data-value" id="valSpeed">0.00</span>
-                </div>
-
-                <!-- Hướng bàn -->
-                <div class="data-box">
-                    <span class="data-label">Hướng La Bàn</span>
-                    <span class="data-value" id="valHeading">0.0°</span>
-                </div>
-
-                <!-- Tọa độ GPS Lat/Lon -->
-                <div class="data-box" style="grid-column: span 2;">
-                    <span class="data-label">Tọa Độ GPS (Vĩ độ / Kinh độ)</span>
-                    <span class="data-value gps-val" id="valGPS">0.000000, 0.000000</span>
-                </div>
-
-                <!-- Điện áp Pin -->
-                <div class="data-box">
-                    <span class="data-label">Điện Áp Pin</span>
-                    <span class="data-value" id="valBattery" style="color: var(--success);">0.00 V</span>
-                </div>
-
-                <!-- Dòng tiêu thụ -->
-                <div class="data-box">
-                    <span class="data-label">Dòng Tiêu Thụ</span>
-                    <span class="data-value" id="valCurrent">0.00 A</span>
-                </div>
-
-                <!-- Nhiệt độ nước -->
-                <div class="data-box">
-                    <span class="data-label">Nhiệt Độ Nước</span>
-                    <span class="data-value" id="valTemp" style="color: var(--danger);">0.0°C</span>
-                </div>
-
-                <!-- Rải mồi -->
-                <div class="data-box">
-                    <span class="data-label">Trạng Thái Mồi</span>
-                    <span class="data-value" id="valFeed" style="color: var(--warning);">0 %</span>
-                </div>
+            <div class="data-box">
+                <span class="data-label"><i class="fa-solid fa-battery-half"></i> Pin (V)</span>
+                <span class="data-value highlight-green" id="valBattery">0.00</span>
             </div>
-
-            <!-- Banner trạng thái hệ thống -->
-            <div class="system-banner" id="systemBanner">
-                <span style="color: var(--text-dim);">Trạng thái phần cứng:</span>
-                <span id="valError" style="color: var(--success); font-weight: 700;">Hệ thống sẵn sàng (System OK)</span>
+            <div class="data-box">
+                <span class="data-label"><i class="fa-solid fa-bolt"></i> Dòng (A)</span>
+                <span class="data-value" id="valCurrent">0.00</span>
+            </div>
+            
+            <div class="data-box">
+                <span class="data-label"><i class="fa-solid fa-temperature-half"></i> Nhiệt Độ</span>
+                <span class="data-value highlight-orange" id="valTemp">0.0°C</span>
+            </div>
+            <div class="data-box">
+                <span class="data-label"><i class="fa-solid fa-fish"></i> Mồi</span>
+                <span class="data-value" id="valFeed">0 %</span>
             </div>
         </div>
 
-        <!-- THẺ ĐIỀU KHIỂN ĐỘNG CƠ (JOYSTICK & CONTROLS) -->
-        <div class="card">
-            <div class="card-header">
-                <div class="title-group">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24M14.83 9.17l4.24-4.24M14.83 14.83l4.24 4.24M9.17 14.83l-4.24 4.24"/></svg>
-                    <span>Cần Gạt Điều Khiển</span>
-                </div>
-                <span id="modeBadge" class="status-badge ok">MANUAL</span>
+        <div style="background: var(--bg); padding: 12px; border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 600; display:flex; justify-content:space-between;">
+            <span style="color: var(--text-dim);">Trạng thái phần cứng:</span>
+            <span id="valError" class="highlight-green">Sẵn sàng (OK)</span>
+        </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="card">
+        <div class="card-header">
+            <div class="title">
+                <i class="fa-solid fa-gamepad"></i> Điều Khiển Tàu
+            </div>
+            <span id="modeBadge" class="badge primary">MANUAL</span>
+        </div>
+
+        <div class="mode-switch">
+            <button class="mode-btn active" id="btnManual" onclick="setMode('MANUAL')">THỦ CÔNG</button>
+            <button class="mode-btn" id="btnAuto" onclick="setMode('AUTO')">TỰ ĐỘNG</button>
+        </div>
+
+        <div class="joystick-container">
+            <div class="joystick-zone" id="joyZone">
+                <div class="joystick-axis axis-x"></div>
+                <div class="joystick-axis axis-y"></div>
+                <div class="joystick-knob" id="joyKnob"></div>
             </div>
 
-            <div class="controls-container">
-                <!-- Chuyển đổi chế độ lái -->
-                <div class="mode-switch">
-                    <button class="mode-btn active" id="btnManual" onclick="setMode('MANUAL')">BẰNG TAY (MANUAL)</button>
-                    <button class="mode-btn" id="btnAuto" onclick="setMode('AUTO')">TỰ ĐỘNG (AUTO)</button>
-                </div>
-
-                <!-- Bảng Joystick ảo -->
-                <div class="joystick-wrapper">
-                    <div class="joystick-zone" id="joyZone">
-                        <div class="joystick-ring ring-outer"></div>
-                        <div class="joystick-ring ring-inner"></div>
-                        <div class="joystick-axis-x"></div>
-                        <div class="joystick-axis-y"></div>
-                        <span class="joystick-label-dir up">TIẾN</span>
-                        <span class="joystick-label-dir down">LÙI</span>
-                        <span class="joystick-label-dir left">TRÁI</span>
-                        <span class="joystick-label-dir right">PHẢI</span>
-                        <div class="joystick-knob" id="joyKnob"></div>
-                    </div>
-
-                    <!-- Chỉ số công suất 2 động cơ L/R -->
-                    <div class="joystick-stats">
-                        <div class="stat-badge">
-                            <span class="stat-name">Động cơ Trái (L):</span>
-                            <span class="stat-num" id="joyLeftStat">0%</span>
-                        </div>
-                        <div class="stat-badge">
-                            <span class="stat-name">Động cơ Phải (R):</span>
-                            <span class="stat-num" id="joyRightStat">0%</span>
-                        </div>
-                    </div>
-
-                    <!-- Nút dừng khẩn cấp -->
-                    <button class="action-btn btn-stop" onclick="emergencyStop()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6"/></svg>
-                        DỪNG KHẨN CẤP (STOP)
-                    </button>
-                </div>
-
-                <!-- Nút Rải Mồi (Feed) -->
-                <button class="action-btn btn-feed" onclick="sendFeed()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    RẢI MỒI CÂU (500 ms)
-                </button>
-
-                <!-- Điều hướng tự động -->
-                <div class="btn-grid">
-                    <button class="action-btn btn-auto-start" onclick="autoStart()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                        AUTO START
-                    </button>
-                    <button class="action-btn btn-auto-stop" onclick="autoStop()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
-                        AUTO STOP
-                    </button>
-                </div>
+            <div class="joystick-stats">
+                <div class="stat-badge">Motor L (Trái)<span id="joyLeftStat">0%</span></div>
+                <div class="stat-badge">Motor R (Phải)<span id="joyRightStat">0%</span></div>
             </div>
         </div>
 
+        <button class="btn btn-feed" onclick="sendFeed()">
+            <i class="fa-solid fa-wheat-awn"></i> RẢI MỒI (1 VÒNG)
+        </button>
+
+        <div class="grid-2">
+            <button class="btn btn-outline" onclick="autoStart()">BẮT ĐẦU AUTO</button>
+            <button class="btn btn-outline" onclick="autoStop()">DỪNG AUTO</button>
+        </div>
+
+        <button class="btn btn-stop" onclick="emergencyStop()">
+            <i class="fa-solid fa-hand"></i> DỪNG KHẨN CẤP
+        </button>
     </div>
 
 </div>
@@ -896,7 +683,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     }
 
     function sendFeed() {
-        command("FEED|500");
+        command("FEED|1");
     }
 
     // ==========================================================

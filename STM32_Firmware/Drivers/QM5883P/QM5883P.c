@@ -11,16 +11,18 @@
 
 extern I2C_HandleTypeDef hi2c1;
 
-void QMC5883P_Init(void) {
+HAL_StatusTypeDef QMC5883P_Init(void) {
   uint8_t config = 0;
   // 1. Setting SET/RESET Period by Datasheet
   config = 0x01;
-  HAL_I2C_Mem_Write(&hi2c1, QMC5883P_ADDR, QMC_SET_RESET, 1, &config, 1, 1000);
+  HAL_StatusTypeDef status = HAL_I2C_Mem_Write(
+      &hi2c1, QMC5883P_ADDR, QMC_SET_RESET, 1, &config, 1, 1000);
   // 2. Setting Control Register 1 (QMC5883P: OSR=4, ODR=200Hz, MODE=Continuous)
   // -> 0x1F
   config = 0x1F;
   HAL_I2C_Mem_Write(&hi2c1, QMC5883P_ADDR, QMC_CTRL_REG1, 1, &config, 1, 1000);
   HAL_Delay(10);
+  return status;
 }
 
 void QMC5883P_ReadRaw(QMC5883P_Data_t *data) {

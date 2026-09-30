@@ -6,6 +6,7 @@
  */
 
 #include "../../Application/Inc/esp32_comm.h"
+#include "../../Application/Inc/stepper.h"
 
 #include "tim.h"
 #include "usart.h"
@@ -216,15 +217,19 @@ static void parse_feed(char *frame) {
     return;
   }
 
-  int time_ms = atoi(sep + 1);
-  if (time_ms <= 0 || time_ms > 10000) {
+  int revs = atoi(sep + 1);
+  if (revs <= 0 || revs > 10) {
     ESP32Comm_SendError("INVALID_PARAMETER");
     return;
   }
 
-  g_usv_state.feed_time_ms = (uint32_t)time_ms;
+  /* 1 vòng quay của 28BYJ-48 (4076 bước, mỗi bước 2ms) mất khoảng 8152ms */
+  g_usv_state.feed_time_ms = (uint32_t)(revs * 8152);
   g_usv_state.feed_active = true;
   g_usv_state.feed_start_tick = HAL_GetTick();
+
+  /* Kích hoạt động cơ bước quay nhả mồi theo số vòng */
+  rotate_stepper((float)revs * 360.0f, 1);
 
   if (g_usv_state.feed_percent >= 5) {
     g_usv_state.feed_percent -= 5;

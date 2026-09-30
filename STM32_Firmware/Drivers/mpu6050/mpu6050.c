@@ -5,10 +5,12 @@
 #include "mpu6050.h"
 extern I2C_HandleTypeDef hi2c1;
 
-void MPU6050_Init(void) {
+HAL_StatusTypeDef MPU6050_Init(void) {
   uint8_t data = 0;
-  HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, MPU6050_PWR, 1, &data, 1, 1000);
+  HAL_StatusTypeDef status =
+      HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, MPU6050_PWR, 1, &data, 1, 1000);
   HAL_Delay(10); // Đợi cảm biến khởi động sau khi thoát chế độ sleep
+  return status;
 }
 
 void MPU6050_ReadRaw(MPU6050_Data_t *data) {
