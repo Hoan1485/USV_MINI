@@ -317,21 +317,10 @@ void setup() {
   WiFi.softAP(AP_SSID, AP_PASSWORD);
 
   Serial.println();
-
-  Serial.println("================================");
-
-  Serial.println("       USV MINI DASHBOARD");
-
-  Serial.println("================================");
-
   Serial.print("WiFi SSID: ");
-
   Serial.println(AP_SSID);
-
   Serial.print("WiFi IP: ");
-
   Serial.println(WiFi.softAPIP());
-
   // --------------------------------------------------------
   // HTTP routes
   // --------------------------------------------------------
