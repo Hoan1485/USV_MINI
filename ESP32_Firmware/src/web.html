@@ -65,6 +65,22 @@
             justify-content: center;
         }
 
+        /* KHUNG BỐ CỤC CHUNG: HỖ TRỢ SIDEBAR TRÊN PC & GIỮ NGUYÊN GIAO DIỆN MOBILE */
+        .app-layout {
+            display: contents;
+            width: 100%;
+        }
+
+        .main-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .sidebar {
+            display: none; /* Mặc định ẩn trên thiết bị di động */
+        }
+
         .container {
             max-width: 600px;
             width: 100%;
@@ -588,29 +604,54 @@
             box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.22), 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
+        /* HIỂN THỊ CÔNG SUẤT 2 ĐỘNG CƠ (MOTOR STATS) */
         .control-stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
             width: 100%;
-            margin-bottom: 6px;
         }
 
         .stat-badge {
             background: var(--bg);
-            padding: 10px;
+            padding: 10px 14px;
             border-radius: var(--radius-md);
-            text-align: center;
-            font-size: 0.85rem;
-            font-weight: 600;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .stat-badge-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.78rem;
+            font-weight: 700;
             color: var(--text-dim);
         }
 
-        .stat-badge span {
+        .stat-badge-header strong {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
             color: var(--primary);
-            font-size: 1.1rem;
-            display: block;
-            font-family: monospace;
+        }
+
+        .stat-progress-track {
+            width: 100%;
+            height: 6px;
+            background: var(--surface);
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .stat-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            border-radius: 3px;
+            transition: width 0.08s ease-out, background 0.15s ease;
         }
 
         /* BUTTONS */
@@ -661,6 +702,39 @@
         .btn-fill {
             background: var(--primary);
             color: white;
+        }
+
+        .action-buttons-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+
+
+        /* SPEED SCALE VẠCH CHIA THƯỚC ĐO TỐC ĐỘ */
+        .speed-control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .speed-scale {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 145px;
+            padding: 4px 0;
+            font-size: 0.65rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--text-dim);
+            text-align: right;
+            user-select: none;
+        }
+
+        .scale-mark {
+            line-height: 1;
         }
 
         /* ==========================================================
@@ -794,16 +868,19 @@
 
             .control-stats-grid {
                 gap: 8px;
-                margin-bottom: 2px;
             }
 
             .stat-badge {
-                padding: 8px;
-                font-size: 0.78rem;
+                padding: 8px 10px;
+                gap: 4px;
             }
 
-            .stat-badge span {
-                font-size: 1rem;
+            .stat-badge-header {
+                font-size: 0.72rem;
+            }
+
+            .stat-badge-header strong {
+                font-size: 0.88rem;
             }
 
             .btn {
@@ -912,156 +989,501 @@
                 gap: 6px;
             }
         }
+
+        /* ==========================================================
+           GIAO DIỆN MÁY TÍNH / PC / LAPTOP (DESKTOP SIDEBAR & WORKSPACE >= 769px)
+           ========================================================== */
+        @media (min-width: 769px) {
+            body {
+                padding: 0;
+                display: block;
+                background-color: var(--bg);
+            }
+
+            .app-layout {
+                display: flex;
+                min-height: 100vh;
+                width: 100%;
+            }
+
+            .sidebar {
+                display: flex;
+                flex-direction: column;
+                width: 275px;
+                min-width: 275px;
+                background: var(--surface);
+                border-right: 1px solid var(--border);
+                padding: 24px 16px;
+                box-shadow: 2px 0 12px rgba(15, 23, 42, 0.04);
+                position: sticky;
+                top: 0;
+                height: 100vh;
+                box-sizing: border-box;
+                gap: 18px;
+                z-index: 50;
+                overflow-y: auto;
+            }
+
+            .sidebar-brand {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding-bottom: 16px;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .brand-icon {
+                width: 44px;
+                height: 44px;
+                border-radius: var(--radius-md);
+                background: linear-gradient(135deg, #2563EB, #1D4ED8);
+                color: #FFFFFF;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.3rem;
+                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            }
+
+            .brand-text h2 {
+                font-size: 1.15rem;
+                font-weight: 800;
+                color: var(--text-main);
+                letter-spacing: -0.5px;
+                line-height: 1.2;
+            }
+
+            .brand-text span {
+                font-size: 0.72rem;
+                font-weight: 600;
+                color: var(--primary);
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .sidebar-menu {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                flex: 1;
+            }
+
+            .sidebar-link {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px 16px;
+                border-radius: var(--radius-md);
+                border: none;
+                background: transparent;
+                color: var(--text-dim);
+                font-size: 0.92rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                text-align: left;
+                width: 100%;
+            }
+
+            .sidebar-link i {
+                font-size: 1.1rem;
+                width: 20px;
+                text-align: center;
+            }
+
+            .sidebar-link:hover {
+                background: var(--bg);
+                color: var(--primary);
+            }
+
+            .sidebar-link.active {
+                background: var(--primary-light);
+                color: var(--primary);
+                font-weight: 700;
+            }
+
+            .sidebar-link.active i {
+                color: var(--primary);
+            }
+
+            /* BẢNG TRẠNG THÁI TRÊN SIDEBAR */
+            .sidebar-status-box {
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                padding: 12px 14px;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .sidebar-status-title {
+                font-size: 0.72rem;
+                font-weight: 700;
+                color: var(--text-dim);
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .sidebar-status-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.8rem;
+            }
+
+            .sidebar-status-row span {
+                color: var(--text-dim);
+            }
+
+            .sidebar-status-row strong {
+                font-family: 'JetBrains Mono', monospace;
+                color: var(--text-main);
+            }
+
+            /* PHÍM TẮT TRÊN MÁY TÍNH */
+            .sidebar-shortcuts {
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                padding: 12px 14px;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .shortcuts-title {
+                font-size: 0.72rem;
+                font-weight: 700;
+                color: var(--text-dim);
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .shortcut-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.75rem;
+                color: var(--text-dim);
+            }
+
+            .shortcut-row kbd {
+                background: #FFFFFF;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+                padding: 1px 5px;
+                font-size: 0.7rem;
+                font-weight: 700;
+                font-family: 'JetBrains Mono', monospace;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                color: var(--text-main);
+            }
+
+            .sidebar-footer {
+                font-size: 0.72rem;
+                color: var(--text-dim);
+                text-align: center;
+                padding-top: 8px;
+                border-top: 1px solid var(--border);
+            }
+
+            /* ẨN HOÀN TOÀN THANH ĐIỀU HƯỚNG DƯỚI (BOTTOM NAV) TRÊN MÁY TÍNH */
+            .bottom-nav {
+                display: none !important;
+            }
+
+            /* KHUNG CHÍNH (MAIN WRAPPER & CONTAINER) TRÊN MÁY TÍNH */
+            .main-wrapper {
+                flex: 1;
+                min-width: 0;
+                padding: 24px 36px;
+                display: flex;
+                justify-content: center;
+                max-height: 100vh;
+                overflow-y: auto;
+                box-sizing: border-box;
+            }
+
+            .container {
+                max-width: 1040px;
+                gap: 20px;
+            }
+
+            /* DÀN TRANG 4 CỘT TRỰC QUAN CHO TELEMETRY TRÊN MÁY TÍNH */
+            .telemetry-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 16px;
+            }
+
+            /* TRẠM ĐIỀU KHIỂN GỌN GÀNG TRÊN MÁY TÍNH */
+            #sectionControl {
+                max-width: 580px;
+                margin: 0 auto;
+                width: 100%;
+            }
+        }
     </style>
 </head>
 
 <body>
 
-    <div class="container">
-
-        <!-- HEADER -->
-        <div class="header">
-            <div class="header-title">
-                <h1>USV MINI</h1>
-                <p>Trạm Giám Sát Hành Trình</p>
-            </div>
-            <div class="status-indicator" id="statusBadge">
-                <div id="statusDot" class="dot"></div>
-                <span id="statusText">Kết nối...</span>
-            </div>
-        </div>
-
-
-
-        <!-- PHẦN 1: TRANG CHỦ -->
-        <div id="sectionHome" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <div class="title">
-                        <i class="fa-solid fa-chart-pie"></i> Dữ Liệu Hành Trình
-                    </div>
-                    <span id="gpsBadge" class="badge err">MẤT GPS</span>
+    <div class="app-layout">
+        <!-- SIDEBAR (HIỂN THỊ TRÊN MÁY TÍNH / PC >= 769px) -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-ship"></i>
                 </div>
-
-                <div class="telemetry-grid">
-                    <div class="data-box">
-                        <span class="data-label"><i class="fa-solid fa-gauge-high"></i> Vận Tốc</span>
-                        <span class="data-value highlight-blue" id="valSpeed">0.00 <span
-                                style="font-size:0.8rem">m/s</span></span>
-                    </div>
-                    <div class="data-box">
-                        <span class="data-label"><i class="fa-regular fa-compass"></i> Góc Hướng</span>
-                        <span class="data-value highlight-blue" id="valHeading">0.0°</span>
-                    </div>
-
-                    <div class="data-box" style="grid-column: span 2;">
-                        <span class="data-label"><i class="fa-solid fa-location-dot"></i> Tọa độ GPS</span>
-                        <span class="data-value gps-val" id="valGPS">---, ---</span>
-                    </div>
-
-                    <div class="data-box">
-                        <span class="data-label"><i class="fa-solid fa-battery-half"></i> Pin (V)</span>
-                        <span class="data-value highlight-green" id="valBattery">0.00</span>
-                    </div>
-                    <div class="data-box">
-                        <span class="data-label"><i class="fa-solid fa-bolt"></i> Dòng (A)</span>
-                        <span class="data-value" id="valCurrent">0.00</span>
-                    </div>
-
-                    <div class="data-box">
-                        <span class="data-label"><i class="fa-solid fa-temperature-half"></i> Nhiệt Độ</span>
-                        <span class="data-value highlight-orange" id="valTemp">0.0°C</span>
-                    </div>
-                    <div class="data-box">
-                        <span class="data-label"><i class="fa-solid fa-fish"></i> Mồi</span>
-                        <span class="data-value" id="valFeed">0 %</span>
-                    </div>
-                </div>
-
-                <div
-                    style="background: var(--bg); padding: 12px; border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 600; display:flex; justify-content:space-between;">
-                    <span style="color: var(--text-dim);">Trạng thái phần cứng:</span>
-                    <span id="valError" class="highlight-green">Sẵn sàng (OK)</span>
+                <div class="brand-text">
+                    <h2>USV MINI</h2>
+                    <span>Trạm Điều Khiển</span>
                 </div>
             </div>
-        </div>
 
-        <!-- PHẦN 2: ĐIỀU KHIỂN -->
-        <div id="sectionControl" class="tab-content hidden">
-            <div class="card">
-                <div class="card-header">
-                    <div class="title">
-                        <i class="fa-solid fa-gamepad"></i> Điều Khiển Tàu
+            <nav class="sidebar-menu">
+                <button class="sidebar-link active" id="sideBtnHome" onclick="switchTab('home')">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Trang Chủ & Dữ Liệu</span>
+                </button>
+                <button class="sidebar-link" id="sideBtnControl" onclick="switchTab('control')">
+                    <i class="fa-solid fa-gamepad"></i>
+                    <span>Bảng Điều Khiển Tàu</span>
+                </button>
+            </nav>
+
+            <!-- BẢNG TRẠNG THÁI HỆ THỐNG TRÊN SIDEBAR -->
+            <div class="sidebar-status-box">
+                <div class="sidebar-status-title">
+                    <i class="fa-solid fa-signal"></i> Trạng Thái Hệ Thống
+                </div>
+                <div class="sidebar-status-row">
+                    <span>Kết nối ESP32:</span>
+                    <strong id="sideStatusText" style="color: var(--success);"><i class="fa-solid fa-circle" style="font-size:0.55rem; vertical-align:middle;"></i> Online</strong>
+                </div>
+                <div class="sidebar-status-row">
+                    <span>Chế độ lái:</span>
+                    <strong id="sideModeText" class="badge ok">MANUAL</strong>
+                </div>
+                <div class="sidebar-status-row">
+                    <span>Điện áp Pin:</span>
+                    <strong id="sideBatteryText" class="highlight-green">0.00 V</strong>
+                </div>
+                <div class="sidebar-status-row">
+                    <span>Tín hiệu GPS:</span>
+                    <strong id="sideGpsText">MẤT GPS</strong>
+                </div>
+            </div>
+
+            <!-- HƯỚNG DẪN PHÍM TẮT TRÊN MÁY TÍNH -->
+            <div class="sidebar-shortcuts">
+                <div class="shortcuts-title">
+                    <i class="fa-solid fa-keyboard"></i> Phím Tắt Máy Tính
+                </div>
+                <div class="shortcut-row">
+                    <span><kbd>W</kbd> <kbd>S</kbd></span>
+                    <span>Tăng / Giảm Ga</span>
+                </div>
+                <div class="shortcut-row">
+                    <span><kbd>A</kbd> <kbd>D</kbd></span>
+                    <span>Bẻ Lái Trái / Phải</span>
+                </div>
+                <div class="shortcut-row">
+                    <span><kbd>Space</kbd></span>
+                    <span>Dừng Khẩn Cấp</span>
+                </div>
+                <div class="shortcut-row">
+                    <span><kbd>0</kbd> - <kbd>5</kbd></span>
+                    <span>Cài Đặt Tốc Độ</span>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <p>USV MINI GCS • v2.0</p>
+            </div>
+        </aside>
+
+        <!-- KHUNG NỘI DUNG CHÍNH (MAIN WRAPPER) -->
+        <div class="main-wrapper">
+            <div class="container">
+
+                <!-- HEADER -->
+                <div class="header">
+                    <div class="header-title">
+                        <h1>USV MINI</h1>
+                        <p>Trạm Giám Sát Hành Trình</p>
                     </div>
-                    <span id="modeBadge" class="badge primary">MANUAL</span>
+                    <div class="status-indicator" id="statusBadge">
+                        <div id="statusDot" class="dot"></div>
+                        <span id="statusText">Kết nối...</span>
+                    </div>
                 </div>
 
-                <div class="mode-switch">
-                    <button class="mode-btn active" id="btnManual" onclick="setMode('MANUAL')">THỦ CÔNG</button>
-                    <button class="mode-btn" id="btnAuto" onclick="setMode('AUTO')">TỰ ĐỘNG</button>
+                <!-- PHẦN 1: TRANG CHỦ -->
+                <div id="sectionHome" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="title">
+                                <i class="fa-solid fa-chart-pie"></i> Dữ Liệu Hành Trình
+                            </div>
+                            <span id="gpsBadge" class="badge err">MẤT GPS</span>
+                        </div>
+
+                        <div class="telemetry-grid">
+                            <div class="data-box">
+                                <span class="data-label"><i class="fa-solid fa-gauge-high"></i> Vận Tốc</span>
+                                <span class="data-value highlight-blue" id="valSpeed">0.00 <span
+                                        style="font-size:0.8rem">m/s</span></span>
+                            </div>
+                            <div class="data-box">
+                                <span class="data-label"><i class="fa-regular fa-compass"></i> Góc Hướng</span>
+                                <span class="data-value highlight-blue" id="valHeading">0.0°</span>
+                            </div>
+
+                            <div class="data-box" style="grid-column: span 2;">
+                                <span class="data-label"><i class="fa-solid fa-location-dot"></i> Tọa độ GPS</span>
+                                <span class="data-value gps-val" id="valGPS">---, ---</span>
+                            </div>
+
+                            <div class="data-box">
+                                <span class="data-label"><i class="fa-solid fa-battery-half"></i> Pin (V)</span>
+                                <span class="data-value highlight-green" id="valBattery">0.00</span>
+                            </div>
+                            <div class="data-box">
+                                <span class="data-label"><i class="fa-solid fa-bolt"></i> Dòng (A)</span>
+                                <span class="data-value" id="valCurrent">0.00</span>
+                            </div>
+
+                            <div class="data-box">
+                                <span class="data-label"><i class="fa-solid fa-temperature-half"></i> Nhiệt Độ</span>
+                                <span class="data-value highlight-orange" id="valTemp">0.0°C</span>
+                            </div>
+                            <div class="data-box">
+                                <span class="data-label"><i class="fa-solid fa-fish"></i> Mồi</span>
+                                <span class="data-value" id="valFeed">0 %</span>
+                            </div>
+                        </div>
+
+                        <div
+                            style="background: var(--bg); padding: 12px; border-radius: var(--radius-md); font-size: 0.85rem; font-weight: 600; display:flex; justify-content:space-between;">
+                            <span style="color: var(--text-dim);">Trạng thái phần cứng:</span>
+                            <span id="valError" class="highlight-green">Sẵn sàng (OK)</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- BỘ ĐIỀU KHIỂN: TỐC ĐỘ + HƯỚNG (TỐI GIẢN & ĐỒNG BỘ) -->
-                <div class="cockpit-container">
-                    <!-- CẦN TỐC ĐỘ -->
-                    <div class="control-col">
-                        <div class="control-header">
-                            <span class="control-title"><i class="fa-solid fa-gauge"></i> TỐC ĐỘ</span>
-                            <span id="speedBadge" class="control-badge stop">0%</span>
-                        </div>
-                        <div class="speed-box">
-                            <div class="speed-track" id="speedTrack">
-                                <div class="speed-fill" id="speedFill"></div>
-                                <div class="speed-thumb" id="speedHandle"></div>
+                <!-- PHẦN 2: ĐIỀU KHIỂN (GIAO DIỆN TRỰC QUAN CAO CẤP) -->
+                <div id="sectionControl" class="tab-content hidden">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="title">
+                                <i class="fa-solid fa-gamepad"></i> Điều Khiển Tàu
                             </div>
+                            <span id="modeBadge" class="badge primary">MANUAL</span>
                         </div>
-                        <div class="control-hint">Kéo cần để chỉnh ga</div>
-                    </div>
 
-                    <!-- THANH GẠT HƯỚNG LÁI (TRÁI - PHẢI) -->
-                    <div class="control-col">
-                        <div class="control-header">
-                            <span class="control-title"><i class="fa-solid fa-compass"></i> HƯỚNG LÁI</span>
-                            <span id="directionBadge" class="control-badge stop">DỪNG</span>
+                        <div class="mode-switch">
+                            <button class="mode-btn active" id="btnManual" onclick="setMode('MANUAL')">THỦ CÔNG</button>
+                            <button class="mode-btn" id="btnAuto" onclick="setMode('AUTO')">TỰ ĐỘNG</button>
                         </div>
-                        <div class="steer-box">
-                            <div class="steer-helm-wrap">
-                                <i class="fa-solid fa-dharmachakra" id="steerHelm"></i>
+
+                        <!-- BỘ CẦN GẠT TAY (COCKPIT TỐI GIẢN) -->
+                        <div class="cockpit-container">
+                            <!-- CẦN TỐC ĐỘ (KÈM THƯỚC ĐO TỶ LỆ) -->
+                            <div class="control-col">
+                                <div class="control-header">
+                                    <span class="control-title"><i class="fa-solid fa-gauge"></i> TỐC ĐỘ</span>
+                                    <span id="speedBadge" class="control-badge stop">0%</span>
+                                </div>
+                                <div class="speed-box">
+                                    <div class="speed-control-group">
+                                        <div class="speed-scale">
+                                            <span class="scale-mark">100</span>
+                                            <span class="scale-mark">75</span>
+                                            <span class="scale-mark">50</span>
+                                            <span class="scale-mark">25</span>
+                                            <span class="scale-mark">0</span>
+                                        </div>
+                                        <div class="speed-track" id="speedTrack">
+                                            <div class="speed-fill" id="speedFill"></div>
+                                            <div class="speed-thumb" id="speedHandle"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="control-hint">Kéo cần để chỉnh ga</div>
                             </div>
-                            <div class="steer-labels">
-                                <span class="steer-left-label"><i class="fa-solid fa-chevron-left"></i> TRÁI</span>
-                                <span class="steer-mid-label">THẲNG</span>
-                                <span class="steer-right-label">PHẢI <i class="fa-solid fa-chevron-right"></i></span>
+
+                            <!-- THANH GẠT HƯỚNG LÁI (TRÁI - PHẢI) -->
+                            <div class="control-col">
+                                <div class="control-header">
+                                    <span class="control-title"><i class="fa-solid fa-compass"></i> HƯỚNG LÁI</span>
+                                    <span id="directionBadge" class="control-badge stop">DỪNG</span>
+                                </div>
+                                <div class="steer-box">
+                                    <div class="steer-helm-wrap">
+                                        <i class="fa-solid fa-dharmachakra" id="steerHelm"></i>
+                                    </div>
+                                    <div class="steer-labels">
+                                        <span class="steer-left-label"><i class="fa-solid fa-chevron-left"></i> TRÁI</span>
+                                        <span class="steer-mid-label" id="steerAngleMid">0°</span>
+                                        <span class="steer-right-label">PHẢI <i class="fa-solid fa-chevron-right"></i></span>
+                                    </div>
+                                    <div class="steer-track" id="steerTrack">
+                                        <div class="steer-center-line"></div>
+                                        <div class="steer-fill-left" id="steerFillLeft"></div>
+                                        <div class="steer-fill-right" id="steerFillRight"></div>
+                                        <div class="steer-thumb" id="steerHandle">
+                                            <i class="fa-solid fa-arrows-left-right" style="font-size: 0.7rem; opacity: 0.85;"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="control-hint">Thả tay tự hồi về giữa</div>
                             </div>
-                            <div class="steer-track" id="steerTrack">
-                                <div class="steer-center-line"></div>
-                                <div class="steer-fill-left" id="steerFillLeft"></div>
-                                <div class="steer-fill-right" id="steerFillRight"></div>
-                                <div class="steer-thumb" id="steerHandle">
-                                    <i class="fa-solid fa-arrows-left-right" style="font-size: 0.7rem; opacity: 0.85;"></i>
+                        </div>
+
+                        <!-- CÔNG SUẤT 2 ĐỘNG CƠ (MOTOR L / MOTOR R) -->
+                        <div class="control-stats-grid">
+                            <div class="stat-badge">
+                                <div class="stat-badge-header">
+                                    <span>Motor L (Trái)</span>
+                                    <strong id="joyLeftStat">0%</strong>
+                                </div>
+                                <div class="stat-progress-track">
+                                    <div class="stat-progress-fill" id="statBarL"></div>
+                                </div>
+                            </div>
+                            <div class="stat-badge">
+                                <div class="stat-badge-header">
+                                    <span>Motor R (Phải)</span>
+                                    <strong id="joyRightStat">0%</strong>
+                                </div>
+                                <div class="stat-progress-track">
+                                    <div class="stat-progress-fill" id="statBarR"></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="control-hint">Thả tay tự hồi về giữa</div>
+
+                        <!-- NÚT THAO TÁC CHÍNH -->
+                        <div class="action-buttons-group">
+                            <button class="btn btn-feed" onclick="sendFeed()">
+                                <i class="fa-solid fa-wheat-awn"></i> RẢI MỒI (1 VÒNG)
+                            </button>
+                            <button class="btn btn-stop" onclick="emergencyStop()">
+                                <i class="fa-solid fa-hand"></i> DỪNG KHẨN CẤP
+                            </button>
+                        </div>
+
                     </div>
                 </div>
 
-                <!-- THỐNG KÊ CÔNG SUẤT MOTOR -->
-                <div class="control-stats-grid">
-                    <div class="stat-badge">Motor L (Trái)<span id="joyLeftStat">0%</span></div>
-                    <div class="stat-badge">Motor R (Phải)<span id="joyRightStat">0%</span></div>
-                </div>
-
-                <button class="btn btn-feed" onclick="sendFeed()">
-                    <i class="fa-solid fa-wheat-awn"></i> RẢI MỒI (1 VÒNG)
-                </button>
-
-                <button class="btn btn-stop" onclick="emergencyStop()">
-                    <i class="fa-solid fa-hand"></i> DỪNG KHẨN CẤP
-                </button>
             </div>
         </div>
-
     </div>
 
     <!-- BOTTOM NAVIGATION BAR (THANH ĐIỀU HƯỚNG DƯỚI CÙNG TRANG WEB) -->
@@ -1098,20 +1520,26 @@
             const secControl = document.getElementById("sectionControl");
             const tabBtnHome = document.getElementById("tabBtnHome");
             const tabBtnControl = document.getElementById("tabBtnControl");
+            const sideBtnHome = document.getElementById("sideBtnHome");
+            const sideBtnControl = document.getElementById("sideBtnControl");
 
             if (tab === 'home') {
                 secHome.classList.remove("hidden");
                 secControl.classList.add("hidden");
-                tabBtnHome.classList.add("active");
-                tabBtnControl.classList.remove("active");
+                if (tabBtnHome) tabBtnHome.classList.add("active");
+                if (tabBtnControl) tabBtnControl.classList.remove("active");
+                if (sideBtnHome) sideBtnHome.classList.add("active");
+                if (sideBtnControl) sideBtnControl.classList.remove("active");
                 // Dừng an toàn nếu đang thao tác cần gạt mà chuyển tab
                 if (isSteerActive) onSteerPointerUp();
                 if (isSpeedActive) onSpeedPointerUp();
             } else {
                 secHome.classList.add("hidden");
                 secControl.classList.remove("hidden");
-                tabBtnControl.classList.add("active");
-                tabBtnHome.classList.remove("active");
+                if (tabBtnControl) tabBtnControl.classList.add("active");
+                if (tabBtnHome) tabBtnHome.classList.remove("active");
+                if (sideBtnControl) sideBtnControl.classList.add("active");
+                if (sideBtnHome) sideBtnHome.classList.remove("active");
                 // Cập nhật lại vị trí hiển thị cần gạt sau khi hiển thị tab điều khiển
                 requestAnimationFrame(function () {
                     updateSpeedVisual(masterSpeed, false);
@@ -1410,8 +1838,29 @@
                 targetRight = Math.max(-100, Math.min(100, Math.round(right)));
             }
 
-            if (joyLeftStat) joyLeftStat.innerText = (targetLeft > 0 ? "+" : "") + targetLeft + "%";
-            if (joyRightStat) joyRightStat.innerText = (targetRight > 0 ? "+" : "") + targetRight + "%";
+            let lStr = (targetLeft > 0 ? "+" : "") + targetLeft + "%";
+            let rStr = (targetRight > 0 ? "+" : "") + targetRight + "%";
+
+            if (joyLeftStat) joyLeftStat.innerText = lStr;
+            if (joyRightStat) joyRightStat.innerText = rStr;
+
+            // CẬP NHẬT THANH CÔNG SUẤT VÀ GÓC LÁI
+            const statBarL = document.getElementById("statBarL");
+            const statBarR = document.getElementById("statBarR");
+            if (statBarL) {
+                statBarL.style.width = Math.abs(targetLeft) + "%";
+                statBarL.style.background = targetLeft >= 0 ? "var(--primary)" : "var(--danger)";
+            }
+            if (statBarR) {
+                statBarR.style.width = Math.abs(targetRight) + "%";
+                statBarR.style.background = targetRight >= 0 ? "var(--primary)" : "var(--danger)";
+            }
+
+            const steerAngleMid = document.getElementById("steerAngleMid");
+            if (steerAngleMid) {
+                let deg = Math.round(steerNormX * 45);
+                steerAngleMid.innerText = (deg === 0 ? "0°" : (deg > 0 ? "+" + deg + "°" : deg + "°"));
+            }
 
             if (targetLeft === 0 && targetRight === 0) {
                 queueStop();
@@ -1501,6 +1950,15 @@
             targetRight = 0;
             if (joyLeftStat) joyLeftStat.innerText = "0%";
             if (joyRightStat) joyRightStat.innerText = "0%";
+
+            const statBarL = document.getElementById("statBarL");
+            const statBarR = document.getElementById("statBarR");
+            if (statBarL) statBarL.style.width = "0%";
+            if (statBarR) statBarR.style.width = "0%";
+
+            const steerAngleMid = document.getElementById("steerAngleMid");
+            if (steerAngleMid) steerAngleMid.innerText = "0°";
+
             command("STOP");
             triggerHaptic(60);
         }
@@ -1675,6 +2133,23 @@
                         valError.style.color = "var(--success)";
                     }
 
+                    // CẬP NHẬT TRẠNG THÁI TRÊN SIDEBAR MÁY TÍNH
+                    const sideStatusText = document.getElementById("sideStatusText");
+                    const sideModeText = document.getElementById("sideModeText");
+                    const sideBatteryText = document.getElementById("sideBatteryText");
+                    const sideGpsText = document.getElementById("sideGpsText");
+
+                    if (sideStatusText) sideStatusText.innerHTML = '<i class="fa-solid fa-circle" style="font-size:0.55rem; vertical-align:middle;"></i> Online';
+                    if (sideModeText) {
+                        sideModeText.innerText = data.mode;
+                        sideModeText.className = data.mode === "MANUAL" ? "badge ok" : "badge err";
+                    }
+                    if (sideBatteryText) sideBatteryText.innerText = data.battery + " V";
+                    if (sideGpsText) {
+                        sideGpsText.innerText = data.gps === "1" ? "ĐÃ KHÓA" : "TÌM VỆ TINH";
+                        sideGpsText.style.color = data.gps === "1" ? "var(--success)" : "var(--danger)";
+                    }
+
                     updateModeUI(data.mode);
                 })
                 .catch(function (err) {
@@ -1682,6 +2157,9 @@
                     const txt = document.getElementById("statusText");
                     dot.classList.remove("connected");
                     txt.innerText = "Mất kết nối ESP32...";
+
+                    const sideStatusText = document.getElementById("sideStatusText");
+                    if (sideStatusText) sideStatusText.innerHTML = '<i class="fa-solid fa-circle" style="color:var(--danger); font-size:0.55rem; vertical-align:middle;"></i> Offline';
 
                     const valError = document.getElementById("valError");
                     valError.innerText = "Lỗi kết nối HTTP WebServer";
