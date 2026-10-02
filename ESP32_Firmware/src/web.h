@@ -14,7 +14,11 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="format-detection" content="telephone=no">
     <title>USV MINI - Trạm Điều Khiển</title>
 
     <!-- Font Awesome (Hỗ trợ hiển thị online) -->
@@ -54,13 +58,20 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             user-select: none;
             -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        html, body {
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: touch;
         }
 
         body {
             background-color: var(--bg);
             color: var(--text-main);
             min-height: 100vh;
-            padding: 16px 16px calc(88px + env(safe-area-inset-bottom, 0px)) 16px;
+            min-height: -webkit-fill-available;
+            padding: 14px 14px calc(80px + env(safe-area-inset-bottom, 0px)) 14px;
             display: flex;
             justify-content: center;
         }
@@ -330,6 +341,9 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             border: 1px solid var(--border);
             margin: 6px 0 16px 0;
             align-items: stretch;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .control-col {
@@ -447,6 +461,12 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             box-shadow: 0 3px 8px rgba(0, 0, 0, 0.16);
             pointer-events: none;
             z-index: 5;
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+        }
+
+        .speed-track:active .speed-thumb {
+            transform: scale(1.08);
+            box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.22), 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
         /* STEERING SLIDER (THANH GẠT HƯỚNG LÁI) */
@@ -571,6 +591,12 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             align-items: center;
             justify-content: center;
             color: var(--primary);
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+        }
+
+        .steer-track:active .steer-thumb {
+            transform: scale(1.08);
+            box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.22), 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
         .control-stats-grid {
@@ -646,6 +672,256 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         .btn-fill {
             background: var(--primary);
             color: white;
+        }
+
+        /* ==========================================================
+           TỐI ƯU HÓA CHO ĐIỆN THOẠI DI ĐỘNG (MOBILE OPTIMIZATIONS)
+           ========================================================== */
+        @media (max-width: 520px) {
+            body {
+                padding: 10px 10px calc(76px + env(safe-area-inset-bottom, 0px)) 10px;
+            }
+
+            .container {
+                gap: 12px;
+            }
+
+            .header {
+                padding: 12px 14px;
+                border-radius: var(--radius-md);
+            }
+
+            .header-title h1 {
+                font-size: 1.15rem;
+            }
+
+            .header-title p {
+                font-size: 0.72rem;
+            }
+
+            .status-indicator {
+                padding: 4px 10px;
+                font-size: 0.75rem;
+                gap: 6px;
+            }
+
+            .card {
+                padding: 14px 12px;
+                border-radius: var(--radius-md);
+                gap: 14px;
+            }
+
+            .card-header {
+                padding-bottom: 10px;
+            }
+
+            .card-header .title {
+                font-size: 0.95rem;
+            }
+
+            /* COCKPIT TRÊN ĐIỆN THOẠI */
+            .cockpit-container {
+                padding: 14px 8px;
+                gap: 10px;
+                margin: 0 0 8px 0;
+                border-radius: var(--radius-md);
+            }
+
+            .control-col {
+                min-height: 215px;
+            }
+
+            .control-header {
+                height: 26px;
+                padding: 0 2px;
+            }
+
+            .control-title {
+                font-size: 0.76rem;
+                gap: 4px;
+            }
+
+            .control-title i {
+                font-size: 0.78rem;
+            }
+
+            .control-badge {
+                font-size: 0.75rem;
+                padding: 2px 6px;
+                min-width: 44px;
+                height: 24px;
+                border-radius: 5px;
+            }
+
+            .speed-box {
+                padding: 4px 0;
+            }
+
+            .speed-track {
+                width: 42px;
+                height: 135px;
+                border-radius: 21px;
+            }
+
+            .speed-thumb {
+                width: 32px;
+                height: 32px;
+                left: 3px;
+                bottom: 3px;
+            }
+
+            .steer-box {
+                gap: 6px;
+                padding: 4px 0;
+            }
+
+            .steer-helm-wrap {
+                width: 38px;
+                height: 38px;
+                font-size: 1.2rem;
+            }
+
+            .steer-labels {
+                font-size: 0.68rem;
+                max-width: 100%;
+            }
+
+            .steer-track {
+                height: 42px;
+                border-radius: 21px;
+            }
+
+            .steer-thumb {
+                width: 32px;
+                height: 32px;
+                left: calc(50% - 16px);
+            }
+
+            .control-hint {
+                font-size: 0.65rem;
+                height: 16px;
+                line-height: 16px;
+            }
+
+            .control-stats-grid {
+                gap: 8px;
+                margin-bottom: 2px;
+            }
+
+            .stat-badge {
+                padding: 8px;
+                font-size: 0.78rem;
+            }
+
+            .stat-badge span {
+                font-size: 1rem;
+            }
+
+            .btn {
+                padding: 13px 14px;
+                font-size: 0.92rem;
+                border-radius: var(--radius-sm);
+            }
+
+            /* TELEMETRY TRÊN ĐIỆN THOẠI */
+            .telemetry-grid {
+                gap: 8px;
+            }
+
+            .data-box {
+                padding: 10px 12px;
+                border-radius: var(--radius-sm);
+            }
+
+            .data-label {
+                font-size: 0.72rem;
+            }
+
+            .data-value {
+                font-size: 1.15rem;
+            }
+
+            .mode-switch {
+                padding: 3px;
+            }
+
+            .mode-btn {
+                padding: 9px;
+                font-size: 0.85rem;
+            }
+
+            /* BOTTOM NAV TRÊN ĐIỆN THOẠI */
+            .bottom-nav {
+                padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px)) 12px;
+            }
+
+            .nav-tab {
+                padding: 10px 14px;
+                font-size: 0.88rem;
+                gap: 8px;
+            }
+
+            .nav-tab i {
+                font-size: 1.05rem;
+            }
+        }
+
+        /* TỐI ƯU KHI XOAY NGANG ĐIỆN THOẠI (LANDSCAPE) */
+        @media (max-height: 520px) and (orientation: landscape) {
+            body {
+                padding: 6px 10px calc(52px + env(safe-area-inset-bottom, 0px)) 10px;
+            }
+
+            .container {
+                max-width: 720px;
+                gap: 8px;
+            }
+
+            .header {
+                padding: 6px 12px;
+            }
+
+            .header-title h1 {
+                font-size: 1rem;
+            }
+
+            .card {
+                padding: 10px 12px;
+                gap: 8px;
+            }
+
+            .cockpit-container {
+                padding: 8px 10px;
+                margin: 0;
+            }
+
+            .control-col {
+                min-height: 160px;
+            }
+
+            .speed-track {
+                height: 95px;
+            }
+
+            .steer-helm-wrap {
+                width: 30px;
+                height: 30px;
+                font-size: 0.95rem;
+            }
+
+            .steer-box {
+                gap: 4px;
+            }
+
+            .bottom-nav {
+                padding: 4px 10px calc(4px + env(safe-area-inset-bottom, 0px)) 10px;
+            }
+
+            .nav-tab {
+                padding: 6px 10px;
+                font-size: 0.78rem;
+                gap: 6px;
+            }
         }
     </style>
 </head>
@@ -909,6 +1185,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             isSpeedActive = true;
             speedTrack.setPointerCapture(e.pointerId);
             speedHandle.style.transition = "none";
+            speedHandle.classList.add("dragging");
+            triggerHaptic(15);
             handleSpeedPointerMove(e.clientY);
         }
 
@@ -921,6 +1199,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         function onSpeedPointerUp(e) {
             if (!isSpeedActive) return;
             isSpeedActive = false;
+            speedHandle.classList.remove("dragging");
+            triggerHaptic(15);
             setTimeout(updateTelemetry, 300);
         }
 
@@ -1006,6 +1286,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             isSteerActive = true;
             steerTrack.setPointerCapture(e.pointerId);
             steerHandle.style.transition = "none";
+            steerHandle.classList.add("dragging");
+            triggerHaptic(15);
             if (steerFillLeft) steerFillLeft.style.transition = "none";
             if (steerFillRight) steerFillRight.style.transition = "none";
             handleSteerPointerMove(e.clientX);
@@ -1020,6 +1302,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         function onSteerPointerUp(e) {
             if (!isSteerActive) return;
             isSteerActive = false;
+            steerHandle.classList.remove("dragging");
+            triggerHaptic(15);
 
             // Lò xo tự hồi về giữa 0 (Chạy thẳng an toàn)
             steerNormX = 0;
