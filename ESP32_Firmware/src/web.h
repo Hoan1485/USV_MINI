@@ -321,22 +321,24 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
         /* COCKPIT CONTROLS (TỐI GIẢN & CÂN ĐỐI) */
         .cockpit-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
             background: var(--bg);
-            padding: 22px 16px;
+            padding: 20px 16px;
             border-radius: var(--radius-lg);
             border: 1px solid var(--border);
             margin: 6px 0 16px 0;
+            align-items: stretch;
         }
 
         .control-col {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 12px;
+            justify-content: space-between;
+            min-height: 236px;
+            width: 100%;
         }
 
         .control-header {
@@ -344,39 +346,74 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             align-items: center;
             justify-content: space-between;
             width: 100%;
-            gap: 8px;
+            height: 28px;
+            padding: 0 2px;
+            box-sizing: border-box;
         }
 
         .control-title {
-            font-size: 0.8rem;
-            font-weight: 700;
+            font-size: 0.82rem;
+            font-weight: 800;
             color: var(--text-dim);
             letter-spacing: 0.5px;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .control-title i {
+            color: var(--primary);
+            font-size: 0.85rem;
         }
 
         .control-badge {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.82rem;
             font-weight: 800;
-            padding: 3px 8px;
+            padding: 2px 8px;
             border-radius: 6px;
             background: var(--surface);
             color: var(--primary);
             border: 1px solid var(--border);
-            min-width: 48px;
+            min-width: 52px;
+            height: 26px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
             white-space: nowrap;
+            box-sizing: border-box;
         }
 
         .control-badge.stop {
             color: var(--text-dim);
         }
 
-        /* SPEED SLIDER (TỐI GIẢN) */
+        .control-hint {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            font-weight: 500;
+            height: 18px;
+            line-height: 18px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        /* SPEED SLIDER (CẦN TỐC ĐỘ) */
+        .speed-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 6px 0;
+            width: 100%;
+        }
+
         .speed-track {
             width: 44px;
-            height: 180px;
+            height: 145px;
             background: var(--surface);
             border: 2px solid var(--border);
             border-radius: 22px;
@@ -401,6 +438,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         .speed-thumb {
             position: absolute;
             left: 3px;
+            bottom: 3px;
             width: 34px;
             height: 34px;
             border-radius: 50%;
@@ -411,49 +449,128 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             z-index: 5;
         }
 
-        /* JOYSTICK (TỐI GIẢN) */
-        .joystick-pad {
-            width: 180px;
-            height: 180px;
-            background: var(--surface);
+        /* STEERING SLIDER (THANH GẠT HƯỚNG LÁI) */
+        .steer-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            gap: 8px;
+            width: 100%;
+            padding: 6px 0;
+        }
+
+        .steer-helm-wrap {
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
-            position: relative;
-            box-shadow: inset 0 2px 5px rgba(15, 23, 42, 0.06);
+            background: var(--surface);
             border: 2px solid var(--border);
             display: flex;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 1.35rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .steer-helm-wrap i {
+            transition: transform 0.12s ease-out;
+            will-change: transform;
+        }
+
+        .steer-labels {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            width: 100%;
+            max-width: 180px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-dim);
+            letter-spacing: 0.3px;
+        }
+
+        .steer-labels .steer-left-label {
+            text-align: left;
+        }
+
+        .steer-labels .steer-mid-label {
+            text-align: center;
+            color: var(--text-dim);
+            font-weight: 700;
+            padding: 0 4px;
+        }
+
+        .steer-labels .steer-right-label {
+            text-align: right;
+        }
+
+        .steer-track {
+            width: 100%;
+            max-width: 180px;
+            height: 44px;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 22px;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.06);
             touch-action: none;
             cursor: pointer;
+            overflow: hidden;
         }
 
-        .joy-axis {
+        .steer-center-line {
             position: absolute;
-            background: var(--border);
-            pointer-events: none;
-            opacity: 0.7;
-        }
-
-        .joy-axis.axis-x {
-            width: 100%;
-            height: 2px;
-        }
-
-        .joy-axis.axis-y {
+            left: 50%;
+            top: 6px;
+            bottom: 6px;
             width: 2px;
-            height: 100%;
+            background: var(--border);
+            transform: translateX(-50%);
+            pointer-events: none;
+            z-index: 2;
         }
 
-        .joy-thumb {
-            width: 58px;
-            height: 58px;
-            background: var(--primary);
-            border-radius: 50%;
+        .steer-fill-left {
             position: absolute;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
-            border: 4px solid var(--surface);
+            top: 0;
+            bottom: 0;
+            right: 50%;
+            width: 0px;
+            background: linear-gradient(270deg, #3B82F6, #2563EB);
             pointer-events: none;
-            transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            z-index: 1;
+        }
+
+        .steer-fill-right {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 0px;
+            background: linear-gradient(90deg, #3B82F6, #2563EB);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .steer-thumb {
+            position: absolute;
+            top: 3px;
+            left: calc(50% - 17px);
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: 3px solid var(--primary);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.16);
+            pointer-events: none;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
         }
 
         .control-stats-grid {
@@ -619,31 +736,48 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     <button class="mode-btn" id="btnAuto" onclick="setMode('AUTO')">TỰ ĐỘNG</button>
                 </div>
 
-                <!-- BỘ ĐIỀU KHIỂN: TỐC ĐỘ + HƯỚNG (TỐI GIẢN) -->
+                <!-- BỘ ĐIỀU KHIỂN: TỐC ĐỘ + HƯỚNG (TỐI GIẢN & ĐỒNG BỘ) -->
                 <div class="cockpit-container">
                     <!-- CẦN TỐC ĐỘ -->
                     <div class="control-col">
                         <div class="control-header">
-                            <span class="control-title">TỐC ĐỘ</span>
-                            <span id="speedBadge" class="control-badge">60%</span>
+                            <span class="control-title"><i class="fa-solid fa-gauge"></i> TỐC ĐỘ</span>
+                            <span id="speedBadge" class="control-badge stop">0%</span>
                         </div>
-                        <div class="speed-track" id="speedTrack">
-                            <div class="speed-fill" id="speedFill"></div>
-                            <div class="speed-thumb" id="speedHandle"></div>
+                        <div class="speed-box">
+                            <div class="speed-track" id="speedTrack">
+                                <div class="speed-fill" id="speedFill"></div>
+                                <div class="speed-thumb" id="speedHandle"></div>
+                            </div>
                         </div>
+                        <div class="control-hint">Kéo cần để chỉnh ga</div>
                     </div>
 
-                    <!-- JOYSTICK HƯỚNG -->
+                    <!-- THANH GẠT HƯỚNG LÁI (TRÁI - PHẢI) -->
                     <div class="control-col">
                         <div class="control-header">
-                            <span class="control-title">HƯỚNG</span>
+                            <span class="control-title"><i class="fa-solid fa-compass"></i> HƯỚNG LÁI</span>
                             <span id="directionBadge" class="control-badge stop">DỪNG</span>
                         </div>
-                        <div class="joystick-pad" id="joyZone">
-                            <div class="joy-axis axis-x"></div>
-                            <div class="joy-axis axis-y"></div>
-                            <div class="joy-thumb" id="joyKnob"></div>
+                        <div class="steer-box">
+                            <div class="steer-helm-wrap">
+                                <i class="fa-solid fa-dharmachakra" id="steerHelm"></i>
+                            </div>
+                            <div class="steer-labels">
+                                <span class="steer-left-label"><i class="fa-solid fa-chevron-left"></i> TRÁI</span>
+                                <span class="steer-mid-label">THẲNG</span>
+                                <span class="steer-right-label">PHẢI <i class="fa-solid fa-chevron-right"></i></span>
+                            </div>
+                            <div class="steer-track" id="steerTrack">
+                                <div class="steer-center-line"></div>
+                                <div class="steer-fill-left" id="steerFillLeft"></div>
+                                <div class="steer-fill-right" id="steerFillRight"></div>
+                                <div class="steer-thumb" id="steerHandle">
+                                    <i class="fa-solid fa-arrows-left-right" style="font-size: 0.7rem; opacity: 0.85;"></i>
+                                </div>
+                            </div>
                         </div>
+                        <div class="control-hint">Thả tay tự hồi về giữa</div>
                     </div>
                 </div>
 
@@ -682,9 +816,19 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     <!-- JAVASCRIPT LOGIC CLIENT -->
     <script>
         // ==========================================================
+        // PHẢN HỒI RUNG (HAPTIC FEEDBACK CHO ĐIỆN THOẠI)
+        // ==========================================================
+        function triggerHaptic(duration = 20) {
+            if ("vibrate" in navigator) {
+                try { navigator.vibrate(duration); } catch (e) { }
+            }
+        }
+
+        // ==========================================================
         // CHUYỂN ĐỔI TAB: TRANG CHỦ <-> ĐIỀU KHIỂN
         // ==========================================================
         function switchTab(tab) {
+            triggerHaptic(15);
             const secHome = document.getElementById("sectionHome");
             const secControl = document.getElementById("sectionControl");
             const tabBtnHome = document.getElementById("tabBtnHome");
@@ -696,7 +840,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                 tabBtnHome.classList.add("active");
                 tabBtnControl.classList.remove("active");
                 // Dừng an toàn nếu đang thao tác cần gạt mà chuyển tab
-                if (isJoyActive) onJoyPointerUp();
+                if (isSteerActive) onSteerPointerUp();
                 if (isSpeedActive) onSpeedPointerUp();
             } else {
                 secHome.classList.add("hidden");
@@ -706,14 +850,15 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                 // Cập nhật lại vị trí hiển thị cần gạt sau khi hiển thị tab điều khiển
                 requestAnimationFrame(function () {
                     updateSpeedVisual(masterSpeed, false);
+                    updateSteerVisual(steerNormX, false);
                 });
             }
         }
 
         // ==========================================================
-        // CẤU HÌNH & TRẠNG THÁI: TỐC ĐỘ CHUNG + JOYSTICK HƯỚNG
+        // CẤU HÌNH & TRẠNG THÁI: TỐC ĐỘ + LÁI TRÁI / PHẢI
         // ==========================================================
-        let isJoyActive = false;
+        let isSteerActive = false;
         let isSpeedActive = false;
         let isHttpBusy = false;
         let nextCommand = null;
@@ -722,11 +867,10 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         const MIN_SEND_INTERVAL = 55; // ms (tối đa ~18 lệnh/giây, rất mượt và không nghẽn TCP)
 
         // Tốc độ chung của động cơ (0% đến 100%)
-        let masterSpeed = 60; // Mặc định 60% tốc độ ban đầu
+        let masterSpeed = 0; // Mặc định 0% khi vào trang để an toàn tuyệt đối
 
-        // Tọa độ vector hướng chuẩn hóa từ Joystick (-1.0 đến +1.0)
-        let joyNormX = 0;
-        let joyNormY = 0;
+        // Độ bẻ lái chuẩn hóa (-1.0 Trái đến +1.0 Phải)
+        let steerNormX = 0;
 
         // Giá trị công suất motor (-100 đến 100)
         let targetLeft = 0;
@@ -736,9 +880,9 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
         // DOM Elements & animation frames
         let speedTrack, speedHandle, speedFill, speedBadge;
-        let joyZone, joyKnob, directionBadge, joyLeftStat, joyRightStat;
-        let joyCenterX = 0, joyCenterY = 0, joyMaxRadius = 60;
-        let joyRafId = null;
+        let steerTrack, steerHandle, steerFillLeft, steerFillRight, directionBadge, steerHelm;
+        let joyLeftStat, joyRightStat;
+        let steerRafId = null;
         let speedRafId = null;
 
         // ==========================================================
@@ -782,30 +926,27 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
         function handleSpeedPointerMove(clientY) {
             const rect = speedTrack.getBoundingClientRect();
-            const handleH = speedHandle.offsetHeight || 36;
+            const handleH = speedHandle.offsetHeight || 34;
             const usableH = rect.height - handleH;
 
             let relY = clientY - (rect.top + handleH / 2);
             relY = Math.max(0, Math.min(usableH, relY));
 
-            let ratio = usableH > 0 ? (1 - (relY / usableH)) : 0.6;
+            let ratio = usableH > 0 ? (1 - (relY / usableH)) : 0;
             let val = Math.round(ratio * 100);
             val = Math.max(0, Math.min(100, val));
 
             masterSpeed = val;
             updateSpeedVisual(masterSpeed, false);
-
-            // Nếu người dùng đang giữ joystick hướng, lập tức cập nhật công suất động cơ
-            if (isJoyActive) {
-                calculateAndDispatchMotors();
-            }
+            updateDirectionBadge(steerNormX);
+            calculateAndDispatchMotors();
         }
 
         function updateSpeedVisual(val, animated) {
             if (!speedTrack || !speedHandle) return;
 
             const rect = speedTrack.getBoundingClientRect();
-            const trackH = rect.height > 0 ? rect.height : 180;
+            const trackH = rect.height > 0 ? rect.height : 145;
             const handleH = speedHandle.offsetHeight || 34;
             const usableH = trackH - handleH;
 
@@ -832,142 +973,165 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         function setMasterSpeed(val) {
             masterSpeed = Math.max(0, Math.min(100, val));
             updateSpeedVisual(masterSpeed, true);
-            if (isJoyActive) {
-                calculateAndDispatchMotors();
-            }
+            updateDirectionBadge(steerNormX);
+            calculateAndDispatchMotors();
         }
 
         // ==========================================================
-        // KHỞI TẠO JOYSTICK ĐIỀU KHIỂN HƯỚNG DI CHUYỂN (360 ĐỘ)
+        // KHỞI TẠO CẦN LÁI TRÁI - PHẢI (THANH TRƯỢT NGANG)
         // ==========================================================
-        function initJoystick() {
-            joyZone = document.getElementById("joyZone");
-            joyKnob = document.getElementById("joyKnob");
+        function initSteering() {
+            steerTrack = document.getElementById("steerTrack");
+            steerHandle = document.getElementById("steerHandle");
+            steerFillLeft = document.getElementById("steerFillLeft");
+            steerFillRight = document.getElementById("steerFillRight");
+            steerHelm = document.getElementById("steerHelm");
             directionBadge = document.getElementById("directionBadge");
             joyLeftStat = document.getElementById("joyLeftStat");
             joyRightStat = document.getElementById("joyRightStat");
 
-            if (!joyZone || !joyKnob) return;
+            if (!steerTrack || !steerHandle) return;
 
-            joyZone.addEventListener("pointerdown", onJoyPointerDown, { passive: false });
-            joyZone.addEventListener("pointermove", onJoyPointerMove, { passive: false });
-            joyZone.addEventListener("pointerup", onJoyPointerUp, { passive: false });
-            joyZone.addEventListener("pointercancel", onJoyPointerUp, { passive: false });
+            steerTrack.addEventListener("pointerdown", onSteerPointerDown, { passive: false });
+            steerTrack.addEventListener("pointermove", onSteerPointerMove, { passive: false });
+            steerTrack.addEventListener("pointerup", onSteerPointerUp, { passive: false });
+            steerTrack.addEventListener("pointercancel", onSteerPointerUp, { passive: false });
+
+            updateSteerVisual(0, false);
+            updateDirectionBadge(0);
         }
 
-        function onJoyPointerDown(e) {
+        function onSteerPointerDown(e) {
             e.preventDefault();
-            isJoyActive = true;
-            joyZone.setPointerCapture(e.pointerId);
-            joyKnob.style.transition = "none";
-
-            const rect = joyZone.getBoundingClientRect();
-            joyCenterX = rect.left + rect.width / 2;
-            joyCenterY = rect.top + rect.height / 2;
-            joyMaxRadius = (rect.width / 2) - (joyKnob.offsetWidth / 2) - 4;
-
-            handleJoyPointerMove(e.clientX, e.clientY);
+            isSteerActive = true;
+            steerTrack.setPointerCapture(e.pointerId);
+            steerHandle.style.transition = "none";
+            if (steerFillLeft) steerFillLeft.style.transition = "none";
+            if (steerFillRight) steerFillRight.style.transition = "none";
+            handleSteerPointerMove(e.clientX);
         }
 
-        function onJoyPointerMove(e) {
-            if (!isJoyActive) return;
+        function onSteerPointerMove(e) {
+            if (!isSteerActive) return;
             e.preventDefault();
-            handleJoyPointerMove(e.clientX, e.clientY);
+            handleSteerPointerMove(e.clientX);
         }
 
-        function onJoyPointerUp(e) {
-            if (!isJoyActive) return;
-            isJoyActive = false;
+        function onSteerPointerUp(e) {
+            if (!isSteerActive) return;
+            isSteerActive = false;
 
-            // Lò xo tự hồi tâm về 0 (Dừng an toàn)
-            joyKnob.style.transition = "transform 0.22s cubic-bezier(0.18, 0.89, 0.32, 1.28)";
-            joyKnob.style.transform = "translate(0px, 0px)";
-
-            joyNormX = 0;
-            joyNormY = 0;
-
-            if (directionBadge) {
-                directionBadge.innerText = "DỪNG";
-                directionBadge.className = "control-badge stop";
-            }
-
+            // Lò xo tự hồi về giữa 0 (Chạy thẳng an toàn)
+            steerNormX = 0;
+            updateSteerVisual(0, true);
+            updateDirectionBadge(0);
             calculateAndDispatchMotors();
             setTimeout(updateTelemetry, 300);
         }
 
-        function handleJoyPointerMove(clientX, clientY) {
-            let dx = clientX - joyCenterX;
-            let dy = clientY - joyCenterY;
-            let distance = Math.hypot(dx, dy);
+        function handleSteerPointerMove(clientX) {
+            const rect = steerTrack.getBoundingClientRect();
+            const handleW = steerHandle.offsetWidth || 34;
+            const trackW = rect.width > 0 ? rect.width : 180;
+            const usableW = trackW - handleW;
+            const centerPx = usableW / 2;
 
-            if (distance > joyMaxRadius) {
-                dx = (dx / distance) * joyMaxRadius;
-                dy = (dy / distance) * joyMaxRadius;
-                distance = joyMaxRadius;
-            }
+            let relX = clientX - (rect.left + handleW / 2);
+            relX = Math.max(0, Math.min(usableW, relX));
 
-            // Tối ưu render 60fps/120fps bằng requestAnimationFrame
-            if (joyRafId) cancelAnimationFrame(joyRafId);
-            joyRafId = requestAnimationFrame(function () {
-                joyKnob.style.transform = "translate(" + dx.toFixed(1) + "px, " + dy.toFixed(1) + "px)";
-            });
-
-            // Chuẩn hóa tọa độ vector hướng (-1.0 đến +1.0)
-            let nx = dx / joyMaxRadius;
-            let ny = -dy / joyMaxRadius; // Trục Y hướng lên là Tiến (+)
-            let normDist = distance / joyMaxRadius;
+            let deltaX = relX - centerPx; // -centerPx -> +centerPx
+            let norm = centerPx > 0 ? (deltaX / centerPx) : 0;
+            norm = Math.max(-1.0, Math.min(1.0, norm));
 
             // Vùng chết Deadzone 8% tại tâm
-            if (normDist < 0.08) {
-                joyNormX = 0;
-                joyNormY = 0;
+            if (Math.abs(norm) < 0.08) {
+                steerNormX = 0;
             } else {
-                joyNormX = nx;
-                joyNormY = ny;
+                steerNormX = norm;
             }
 
-            updateDirectionBadge(joyNormX, joyNormY);
+            updateSteerVisual(steerNormX, false);
+            updateDirectionBadge(steerNormX);
             calculateAndDispatchMotors();
         }
 
-        function updateDirectionBadge(nx, ny) {
+        function updateSteerVisual(normX, animated) {
+            if (!steerTrack || !steerHandle) return;
+
+            const rect = steerTrack.getBoundingClientRect();
+            const trackW = rect.width > 0 ? rect.width : 180;
+            const handleW = steerHandle.offsetWidth || 34;
+            const usableW = trackW - handleW;
+            const centerPx = usableW / 2;
+
+            let posLeft = centerPx + (normX * centerPx);
+
+            if (steerRafId) cancelAnimationFrame(steerRafId);
+            steerRafId = requestAnimationFrame(function () {
+                const tr = animated ? "left 0.22s cubic-bezier(0.18, 0.89, 0.32, 1.28)" : "none";
+                steerHandle.style.transition = tr;
+                steerHandle.style.left = posLeft.toFixed(1) + "px";
+
+                if (steerFillLeft && steerFillRight) {
+                    steerFillLeft.style.transition = animated ? "width 0.22s ease-out" : "none";
+                    steerFillRight.style.transition = animated ? "width 0.22s ease-out" : "none";
+
+                    if (normX < 0) {
+                        let fillW = Math.abs(normX) * (trackW / 2);
+                        steerFillLeft.style.width = fillW.toFixed(1) + "px";
+                        steerFillRight.style.width = "0px";
+                    } else if (normX > 0) {
+                        let fillW = normX * (trackW / 2);
+                        steerFillRight.style.width = fillW.toFixed(1) + "px";
+                        steerFillLeft.style.width = "0px";
+                    } else {
+                        steerFillLeft.style.width = "0px";
+                        steerFillRight.style.width = "0px";
+                    }
+                }
+
+                if (steerHelm) {
+                    steerHelm.style.transform = "rotate(" + (normX * 60).toFixed(1) + "deg)";
+                }
+            });
+        }
+
+        function updateDirectionBadge(nx) {
             if (!directionBadge) return;
 
-            let dist = Math.hypot(nx, ny);
-            if (dist === 0) {
+            if (masterSpeed === 0) {
                 directionBadge.innerText = "DỪNG";
                 directionBadge.className = "control-badge stop";
                 return;
             }
 
-            let text = "TIẾN";
-            if (Math.abs(nx) < 0.35 && ny > 0) text = "TIẾN";
-            else if (Math.abs(nx) < 0.35 && ny < 0) text = "LÙI";
-            else if (Math.abs(ny) < 0.35 && nx < 0) text = "TRÁI";
-            else if (Math.abs(ny) < 0.35 && nx > 0) text = "PHẢI";
-            else if (ny > 0 && nx > 0) text = "TIẾN PHẢI";
-            else if (ny > 0 && nx < 0) text = "TIẾN TRÁI";
-            else if (ny < 0 && nx > 0) text = "LÙI PHẢI";
-            else if (ny < 0 && nx < 0) text = "LÙI TRÁI";
-
-            directionBadge.innerText = text;
-            directionBadge.className = "control-badge";
+            if (Math.abs(nx) <= 0.08) {
+                directionBadge.innerText = "THẲNG";
+                directionBadge.className = "control-badge";
+            } else if (nx < 0) {
+                let pct = Math.round(Math.abs(nx) * 100);
+                directionBadge.innerText = "TRÁI " + pct + "%";
+                directionBadge.className = "control-badge";
+            } else {
+                let pct = Math.round(nx * 100);
+                directionBadge.innerText = "PHẢI " + pct + "%";
+                directionBadge.className = "control-badge";
+            }
         }
 
         // ==========================================================
-        // TÍNH TOÁN CÔNG SUẤT ĐỘNG CƠ: HƯỚNG * TỐC ĐỘ CHUNG
+        // TÍNH TOÁN CÔNG SUẤT ĐỘNG CƠ: TỐC ĐỘ + VI SAI LÁI TRÁI/PHẢI
         // ==========================================================
         function calculateAndDispatchMotors() {
-            if (joyNormX === 0 && joyNormY === 0) {
+            if (masterSpeed === 0) {
                 targetLeft = 0;
                 targetRight = 0;
             } else {
-                // Vi sai hướng di chuyển kết hợp cùng Tốc độ chung
-                let forward = joyNormY * masterSpeed;
-                let turn = joyNormX * masterSpeed;
+                // Vi sai bẻ lái: bẻ bên nào thì bên đó giảm, bên đối diện giữ/tăng
+                let turn = steerNormX * Math.max(masterSpeed, 40);
 
-                let left = forward + turn;
-                let right = forward - turn;
+                let left = masterSpeed + turn;
+                let right = masterSpeed - turn;
 
                 targetLeft = Math.max(-100, Math.min(100, Math.round(left)));
                 targetRight = Math.max(-100, Math.min(100, Math.round(right)));
@@ -1054,25 +1218,22 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         }
 
         function emergencyStop() {
-            isJoyActive = false;
-            joyNormX = 0;
-            joyNormY = 0;
-            if (joyKnob) {
-                joyKnob.style.transition = "transform 0.15s ease-out";
-                joyKnob.style.transform = "translate(0px, 0px)";
-            }
-            if (directionBadge) {
-                directionBadge.innerText = "DỪNG";
-                directionBadge.className = "control-badge stop";
-            }
+            isSteerActive = false;
+            steerNormX = 0;
+            masterSpeed = 0;
+            updateSpeedVisual(0, true);
+            updateSteerVisual(0, true);
+            updateDirectionBadge(0);
             targetLeft = 0;
             targetRight = 0;
             if (joyLeftStat) joyLeftStat.innerText = "0%";
             if (joyRightStat) joyRightStat.innerText = "0%";
             command("STOP");
+            triggerHaptic(60);
         }
 
         function setMode(mode) {
+            triggerHaptic(20);
             if (mode === "AUTO") {
                 command("MODE|AUTO");
                 command("AUTO_START");
@@ -1102,16 +1263,105 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         }
 
         function sendFeed() {
+            triggerHaptic(35);
             command("FEED|1");
         }
+
+        // ==========================================================
+        // ĐIỀU KHIỂN BẰNG BÀN PHÍM TRÊN MÁY TÍNH (PC / LAPTOP)
+        // ==========================================================
+        const keysPressed = {};
+
+        window.addEventListener("keydown", function (e) {
+            const secControl = document.getElementById("sectionControl");
+            if (!secControl || secControl.classList.contains("hidden")) return;
+            if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+            const k = e.key.toLowerCase();
+
+            // Phím Space: Dừng khẩn cấp
+            if (e.code === "Space") {
+                e.preventDefault();
+                emergencyStop();
+                return;
+            }
+
+            // Phím 0 - 5: Đặt nhanh mức tốc độ
+            if (e.key >= '0' && e.key <= '5') {
+                const speeds = { '0': 0, '1': 20, '2': 40, '3': 60, '4': 80, '5': 100 };
+                setMasterSpeed(speeds[e.key]);
+                return;
+            }
+
+            // Phím W / Mũi tên lên: Tăng tốc độ (+5%)
+            if (k === 'w' || k === 'arrowup') {
+                e.preventDefault();
+                setMasterSpeed(Math.min(100, masterSpeed + 5));
+                return;
+            }
+
+            // Phím S / Mũi tên xuống: Giảm tốc độ (-5%)
+            if (k === 's' || k === 'arrowdown') {
+                e.preventDefault();
+                setMasterSpeed(Math.max(0, masterSpeed - 5));
+                return;
+            }
+
+            // Phím A / D hoặc Mũi tên trái / phải: Bẻ lái
+            if (['a', 'd', 'arrowleft', 'arrowright'].includes(k)) {
+                e.preventDefault();
+                if (!keysPressed[k]) {
+                    keysPressed[k] = true;
+                    updateKeyboardSteer();
+                }
+            }
+        });
+
+        window.addEventListener("keyup", function (e) {
+            const k = e.key.toLowerCase();
+            if (keysPressed[k]) {
+                delete keysPressed[k];
+                updateKeyboardSteer();
+            }
+        });
+
+        function updateKeyboardSteer() {
+            let kx = 0;
+            if (keysPressed['d'] || keysPressed['arrowright']) kx += 1.0;
+            if (keysPressed['a'] || keysPressed['arrowleft']) kx -= 1.0;
+
+            steerNormX = kx;
+
+            if (!steerTrack || !steerHandle) return;
+
+            if (kx === 0) {
+                isSteerActive = false;
+                updateSteerVisual(0, true);
+                updateDirectionBadge(0);
+                calculateAndDispatchMotors();
+            } else {
+                isSteerActive = true;
+                updateSteerVisual(steerNormX, false);
+                updateDirectionBadge(steerNormX);
+                calculateAndDispatchMotors();
+            }
+        }
+
+        // ==========================================================
+        // TỰ ĐỘNG CẬP NHẬT KHI XOAY MÀN HÌNH HOẶC RESIZE CỬA SỔ
+        // ==========================================================
+        window.addEventListener("resize", function () {
+            updateSpeedVisual(masterSpeed, false);
+            updateSteerVisual(steerNormX, false);
+        });
 
         // ==========================================================
         // LẤY DỮ LIỆU TELEMETRY ĐỊNH KỲ (THÔNG MINH, KHÔNG TRANH CHẤP KHI LÁI)
         // ==========================================================
         function updateTelemetry() {
-            // QUAN TRỌNG: Nếu người dùng đang kéo cần tốc độ hoặc joystick hướng, tạm ngưng polling
+            // QUAN TRỌNG: Nếu người dùng đang kéo cần tốc độ hoặc lái, tạm ngưng polling
             // để dành 100% băng thông Wi-Fi và CPU cho lệnh động cơ, loại bỏ hoàn toàn lag!
-            if (isJoyActive || isSpeedActive || isHttpBusy) return;
+            if (isSteerActive || isSpeedActive || isHttpBusy) return;
 
             fetch("/status", { cache: "no-store" })
                 .then(function (res) {
@@ -1172,7 +1422,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         // Khởi tạo ngay khi tải xong trang
         window.addEventListener("DOMContentLoaded", function () {
             initSpeedSlider();
-            initJoystick();
+            initSteering();
             updateTelemetry();
         });
     </script>
