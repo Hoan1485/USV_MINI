@@ -1,9 +1,1711 @@
-#ifndef WEB_H
-#define WEB_H
-#include <Arduino.h>
+================================================================================
+PHỤ LỤC 2: FILE MÃ NGUỒN SẢN PHẨM (SOURCE CODE)
+TÊN SẢN PHẨM: TÀU THỦY KHÔNG NGƯỜI LÁI THU THẬP DỮ LIỆU THỦY VĂN (USV MINI)
+TÊN FILE: STT.TenDoi.SourceCode.txt
+================================================================================
+* LƯU Ý BẢO MẬT: Toàn bộ thông tin bảo mật (mật khẩu WiFi, tài khoản, API Key)
+  đã được ẩn/mã hóa bằng ký hiệu '********' theo đúng quy định của Ban tổ chức.
+================================================================================
 
-// USV MINI - WebServer
-const char INDEX_HTML[] PROGMEM = R"rawliteral(
+DANH MỤC CÁC CHƯƠNG TRÌNH NGUỒN TRONG SẢN PHẨM:
+#1. CHƯƠNG TRÌNH STM32 (BỘ ĐIỀU KHIỂN TRUNG TÂM TÀU USV)
+  #Chức năng: Thu thập và xử lý tín hiệu cảm biến (GPS ATGM336H, la bàn số QMC5883P, IMU MPU6050, nhiệt độ nước DS18B20); tính toán thuật toán dẫn đường PID và bám quỹ đạo tọa độ (Navigation & Waypoint); điều khiển động cơ đẩy chân vịt (PWM RC ESC) và cơ cấu rải mồi (động cơ bước Stepper); giao tiếp UART hai chiều với vi điều khiển ESP32.
+  [1.1] STM32_Firmware/Core/Src/main.c - Khởi tạo hệ thống, cấu hình ngoại vi, vòng lặp điều khiển chính và điều phối các tác vụ hệ thống
+  [1.2] STM32_Firmware/Application/Inc/esp32_comm.h - Định nghĩa cấu trúc dữ liệu Telemetry, mã lệnh điều khiển và nguyên mẫu hàm giao tiếp ESP32
+  [1.3] STM32_Firmware/Application/Src/esp32_comm.c - Module giao tiếp UART với ESP32, phân tích cú pháp lệnh điều khiển và đóng gói gửi dữ liệu Telemetry
+  [1.4] STM32_Firmware/Application/Inc/nav.h - Định nghĩa cấu trúc bộ điều khiển PID và hàm tính toán điều hướng tự hành
+  [1.5] STM32_Firmware/Application/Src/nav.c - Thuật toán tính khoảng cách (Haversine), góc hướng Bearing và bộ điều khiển PID giữ hướng bám tọa độ mục tiêu
+  [1.6] STM32_Firmware/Application/Inc/motor.h - Khai báo các hàm điều khiển động cơ chân vịt
+  [1.7] STM32_Firmware/Application/Src/PWM_Motor.c - Điều khiển phát xung PWM (Timer 4) cho bộ điều tốc ESC của 2 động cơ chân vịt trái/phải
+  [1.8] STM32_Firmware/Application/Inc/stepper.h - Khai báo hàm điều khiển động cơ bước cơ cấu nhả mồi/rải thức ăn
+  [1.9] STM32_Firmware/Application/Src/stepper.c - Thuật toán điều khiển động cơ bước 28BYJ-48 half-step theo máy trạng thái non-blocking
+  [1.10] STM32_Firmware/Drivers/ATGM336H/atgm336.h - Định nghĩa cấu trúc dữ liệu tọa độ GPS ATGM336H
+  [1.11] STM32_Firmware/Drivers/ATGM336H/atgm336.c - Driver giải mã bản tin NMEA ($GNRMC) lấy tọa độ kinh độ, vĩ độ và vận tốc
+  [1.12] STM32_Firmware/Drivers/QM5883P/QM5883P.h - Định nghĩa thanh ghi và cấu trúc la bàn từ trường số QMC5883P/QMC5883L
+  [1.13] STM32_Firmware/Drivers/QM5883P/QM5883P.c - Driver giao tiếp I2C đọc giá trị từ trường 3 trục và xác định góc hướng (Heading)
+  [1.14] STM32_Firmware/Drivers/mpu6050/mpu6050.h - Định nghĩa thông số cảm biến chuyển động và góc nghiêng 6 trục IMU MPU6050
+  [1.15] STM32_Firmware/Drivers/mpu6050/mpu6050.c - Driver I2C đọc dữ liệu gia tốc và vận tốc góc để đo độ nghiêng của tàu
+  [1.16] STM32_Firmware/Drivers/ds18b20/ds18b20.h - Định nghĩa giao tiếp cảm biến nhiệt độ nước chống thấm DS18B20
+  [1.17] STM32_Firmware/Drivers/ds18b20/ds18b20.c - Driver chuẩn giao tiếp 1-Wire đọc nhiệt độ môi trường nước
+
+#2. CHƯƠNG TRÌNH ESP32 (TRUYỀN THÔNG & TRẠM PHÁT WIFI ACCESS POINT)
+  #Chức năng: Khởi tạo mạng WiFi nội bộ (SoftAP) không cần Internet; thiết lập máy chủ HTTP Web Server phục vụ giao diện điều khiển và các RESTful API (/command, /status); làm cầu nối giao tiếp UART hai chiều với STM32 (chuyển tiếp lệnh từ Web xuống vi điều khiển và đồng bộ dữ liệu trạng thái).
+  [2.1] ESP32_Firmware/src/config.h - Cấu hình tên mạng WiFi SoftAP, chân UART và tốc độ Baudrate (Mật khẩu đã được ẩn theo quy định bảo mật)
+  [2.2] ESP32_Firmware/src/main.cpp - Chương trình chính ESP32: Quản lý WiFi AP, Web Server, xử lý REST API và phân tích khung truyền UART
+
+#3. CHƯƠNG TRÌNH GIAO DIỆN WEB (WEB DASHBOARD INTERFACE)
+  #Chức năng: Giao diện người dùng Web Dashboard trực quan (HTML5/CSS3/JavaScript); hiển thị thời gian thực các thông số cảm biến (kinh độ, vĩ độ, la bàn, tốc độ, điện áp pin, dòng điện, nhiệt độ nước...); cung cấp bộ điều khiển chân vịt trực tiếp (Sliders/Joystick), chuyển đổi chế độ Manual/Auto, ra lệnh rải mồi và tự động cập nhật trạng thái qua HTTP polling/Fetch API.
+  [3.1] ESP32_Firmware/src/web.html - Toàn bộ mã nguồn giao diện Web Dashboard (HTML5 ngữ nghĩa, thiết kế CSS hiện đại Glassmorphism và kịch bản JavaScript điều khiển AJAX/Fetch API)
+
+================================================================================
+
+#1. CHƯƠNG TRÌNH STM32 (BỘ ĐIỀU KHIỂN TRUNG TÂM TÀU USV)
+#Chức năng: Thu thập và xử lý tín hiệu cảm biến (GPS ATGM336H, la bàn số QMC5883P, IMU MPU6050, nhiệt độ nước DS18B20); tính toán thuật toán dẫn đường PID và bám quỹ đạo tọa độ (Navigation & Waypoint); điều khiển động cơ đẩy chân vịt (PWM RC ESC) và cơ cấu rải mồi (động cơ bước Stepper); giao tiếp UART hai chiều với vi điều khiển ESP32.
+
+--------------------------------------------------------------------------------
+[1.1] File: STM32_Firmware/Core/Src/main.c
+// Chức năng: Khởi tạo hệ thống, cấu hình ngoại vi, vòng lặp điều khiển chính và điều phối các tác vụ hệ thống
+--------------------------------------------------------------------------------
+#include "main.h"
+#include "gpio.h"
+#include "i2c.h"
+#include "tim.h"
+#include "usart.h"
+
+#include "QM5883P.h"
+#include "atgm336h/atgm336.h"
+#include "ds18b20/ds18b20.h"
+#include "esp32_comm.h"
+#include "mpu6050/mpu6050.h"
+#include "stepper.h"
+#include <math.h>
+#include <stdio.h>
+
+ATGM336H_Data_t gps_data;
+uint8_t gps_rx_data;
+
+void SystemClock_Config(void);
+
+void MPU6050_SendToUART(MPU6050_Data_t *data);
+
+/**
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void) {
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick.
+   */
+  HAL_Init();
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_I2C1_Init();
+  MX_TIM1_Init();
+  MX_TIM4_Init();
+  MX_USART1_UART_Init();
+  MX_USART3_UART_Init();
+  MX_USART2_UART_Init();
+
+  /* MPU6050 và QMC5883P init must be after I2C init and SystemClock_Config */
+  printf("Starting I2C Sensors...\r\n");
+
+  if (MPU6050_Init() == HAL_OK) {
+    printf("MPU6050 Init SUCCESS\r\n");
+  } else {
+    printf("MPU6050 Init FAILED\r\n");
+  }
+
+  if (QMC5883P_Init() == HAL_OK) {
+    printf("QMC5883P Init SUCCESS\r\n");
+  } else {
+    printf("QMC5883P Init FAILED\r\n");
+  }
+
+  DS18B20_Init();
+  DS18B20_Request_Temp(); // Bắt đầu quá trình đo nhiệt độ đầu tiên
+
+  extern void MX_Stepper_GPIO_Init(void);
+  MX_Stepper_GPIO_Init();
+
+  ATGM336H_Init(&gps_data);
+  HAL_UART_Receive_IT(&huart1, &gps_rx_data, 1);
+  ESP32Comm_Init(&huart2);
+
+  uint32_t last_status_tick = 0;
+  uint32_t last_temp_req = 0;
+
+  while (1) {
+    MPU6050_Data_t imu = {0};
+    QMC5883P_Data_t mag = {0};
+
+    /* 1. Đọc dữ liệu cảm biến */
+    MPU6050_ReadRaw(&imu);
+    QMC5883P_ReadRaw(&mag);
+
+    /* 2. Tính góc hướng la bàn (Heading) từ QMC5883P */
+    float heading = atan2f(mag.My, mag.Mx) * 180.0f / 3.14159265f;
+    if (heading < 0.0f) {
+      heading += 360.0f;
+    }
+    g_usv_state.heading = heading;
+
+    /* 3. Cập nhật nhiệt độ nước từ DS18B20 (mỗi 750ms) */
+    if (HAL_GetTick() - last_temp_req >= 750) {
+      last_temp_req = HAL_GetTick();
+      g_usv_state.water_temp = DS18B20_Read_Temp();
+      DS18B20_Request_Temp();
+    }
+
+    /* 4. Cập nhật dữ liệu GPS */
+    g_usv_state.current_lat = gps_data.latitude;
+    g_usv_state.current_lon = gps_data.longitude;
+    g_usv_state.speed = gps_data.speed_kph / 3.6f; /* m/s */
+    g_usv_state.gps_valid = (gps_data.valid != 0);
+
+    /* 5. Xử lý lệnh nhận được từ ESP32 */
+    ESP32Comm_Process();
+
+    /* 6. Định kỳ 500ms gửi STATUS lên ESP32 Web Dashboard */
+    if (HAL_GetTick() - last_status_tick >= 500) {
+      last_status_tick = HAL_GetTick();
+      ESP32Comm_SendStatus();
+    }
+
+    /* 7. Cập nhật động cơ bước liên tục (non-blocking) */
+    stepper_update();
+  }
+}
+
+/**
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void) {
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /** Configure the main internal regulator output voltage
+   */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+  /** Initializes the RCC Oscillators according to the specified parameters
+   * in the RCC_OscInitTypeDef structure.
+   */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 168;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+    Error_Handler();
+  }
+
+  /** Initializes the CPU, AHB and APB buses clocks
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK |
+                                RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK) {
+    Error_Handler();
+  }
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+  if (huart->Instance == USART1) {
+    ATGM336H_ProcessChar((char)gps_rx_data, &gps_data);
+    HAL_UART_Receive_IT(&huart1, &gps_rx_data, 1);
+  } else if (huart->Instance == USART2) {
+    ESP32Comm_RxCpltCallback(huart);
+  }
+}
+
+/**
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
+void Error_Handler(void) {
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1) {
+  }
+}
+#ifdef USE_FULL_ASSERT
+/**
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
+void assert_failed(uint8_t *file, uint32_t line) {
+  /* User can add his own implementation to report the file name and line
+     number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
+     line) */
+}
+#endif /* USE_FULL_ASSERT */
+
+--------------------------------------------------------------------------------
+[1.2] File: STM32_Firmware/Application/Inc/esp32_comm.h
+// Chức năng: Định nghĩa cấu trúc dữ liệu Telemetry, mã lệnh điều khiển và nguyên mẫu hàm giao tiếp ESP32
+--------------------------------------------------------------------------------
+/**
+ ******************************************************************************
+ * @file    esp32_comm.h
+ * @brief   Header file for UART communication between STM32 and ESP32
+ ******************************************************************************
+ */
+
+#ifndef __ESP32_COMM_H
+#define __ESP32_COMM_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "stm32f4xx_hal.h"
+#include <stdint.h>
+#include <stdbool.h>
+
+// USV STATE DEFINITIONS
+
+typedef enum {
+    USV_MODE_MANUAL = 0,
+    USV_MODE_AUTO   = 1
+} USV_Mode_t;
+
+typedef struct {
+    /* Động cơ (-100 đến 100 %) */
+    int8_t motor_left;
+    int8_t motor_right;
+
+    /* Chế độ vận hành */
+    USV_Mode_t mode;
+    bool auto_running;
+
+    /* Toạ độ mục tiêu (Waypoint) */
+    double target_lat;
+    double target_lon;
+    bool waypoint_valid;
+
+    /* Cơ cấu rải thức ăn */
+    uint32_t feed_time_ms;
+    bool feed_active;
+    uint32_t feed_start_tick;
+    int8_t feed_percent;
+
+    /* Dữ liệu Telemetry cảm biến gửi lên ESP32 */
+    double current_lat;
+    double current_lon;
+    float heading;
+    float speed;
+    float battery_volt;
+    float current_amp;
+    float water_temp;
+    bool gps_valid;
+} USV_State_t;
+
+extern USV_State_t g_usv_state;
+
+// FUNCTION PROTOTYPES
+
+/**
+ * @brief Khởi tạo giao tiếp UART với ESP32
+ * @param huart Con trỏ tới UART_HandleTypeDef (thường là huart3)
+ */
+void ESP32Comm_Init(UART_HandleTypeDef *huart);
+
+/**
+ * @brief Callback gọi từ HAL_UART_RxCpltCallback khi có ngắt nhận byte trên USART3
+ * @param huart Con trỏ tới UART_HandleTypeDef kích hoạt ngắt
+ */
+void ESP32Comm_RxCpltCallback(UART_HandleTypeDef *huart);
+
+/**
+ * @brief Xử lý byte nhận được trong ngắt UART Rx
+ * @param c Ký tự nhận được từ USART3
+ */
+void ESP32Comm_RxCallback(char c);
+
+/**
+ * @brief Tác vụ kiểm tra và xử lý lệnh từ ESP32 (gọi trong while(1))
+ */
+void ESP32Comm_Process(void);
+
+/**
+ * @brief Định dạng và gửi gói STATUS lên ESP32 định kỳ
+ */
+void ESP32Comm_SendStatus(void);
+
+/**
+ * @brief Gửi thông báo lỗi lên ESP32
+ * @param err_code Mã lỗi (ví dụ: "GPS_INVALID", "UNKNOWN_COMMAND", ...)
+ */
+void ESP32Comm_SendError(const char *err_code);
+
+/**
+ * @brief Áp dụng tốc độ động cơ xuống phần cứng (TIM4 PWM ESC)
+ * @param left Tốc độ động cơ trái (-100 đến 100)
+ * @param right Tốc độ động cơ phải (-100 đến 100)
+ */
+void Motor_ApplyPWM(int8_t left, int8_t right);
+
+/**
+ * @brief Dừng toàn bộ động cơ khẩn cấp
+ */
+void Motor_Stop(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* __ESP32_COMM_H */
+
+--------------------------------------------------------------------------------
+[1.3] File: STM32_Firmware/Application/Src/esp32_comm.c
+// Chức năng: Module giao tiếp UART với ESP32, phân tích cú pháp lệnh điều khiển và đóng gói gửi dữ liệu Telemetry
+--------------------------------------------------------------------------------
+/**
+ ******************************************************************************
+ * @file    esp32_comm.c
+ * @brief   Implementation of UART communication with ESP32
+ ******************************************************************************
+ */
+
+#include "../../Application/Inc/esp32_comm.h"
+#include "../../Application/Inc/stepper.h"
+
+#include "tim.h"
+#include "usart.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define RX_BUFFER_SIZE 256
+
+// PRIVATE VARIABLES
+
+static UART_HandleTypeDef *s_esp32_huart = NULL;
+
+static uint8_t s_rx_byte = 0;
+static char s_rx_buffer[RX_BUFFER_SIZE];
+static uint16_t s_rx_index = 0;
+
+static char s_pending_cmd[RX_BUFFER_SIZE];
+static volatile bool s_cmd_ready = false;
+
+/* Biến toàn cục trạng thái USV */
+USV_State_t g_usv_state;
+
+// INITIALIZATION
+
+void ESP32Comm_Init(UART_HandleTypeDef *huart) {
+  s_esp32_huart = huart;
+
+  /* Khởi tạo dữ liệu mặc định */
+  memset(&g_usv_state, 0, sizeof(USV_State_t));
+  g_usv_state.mode = USV_MODE_MANUAL;
+  g_usv_state.auto_running = false;
+  g_usv_state.battery_volt = 12.0f;
+  g_usv_state.feed_percent = 100;
+  g_usv_state.gps_valid = false;
+  g_usv_state.waypoint_valid = false;
+
+  /* Khởi động PWM cho 2 kênh ESC trên TIM4 */
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); // Trái (PB6)
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2); // Phải (PB7)
+  Motor_Stop();
+
+  /* Bắt đầu nhận ký tự đầu tiên từ USART3 qua ngắt */
+  if (s_esp32_huart != NULL) {
+    HAL_UART_Receive_IT(s_esp32_huart, &s_rx_byte, 1);
+  }
+}
+
+// UART RX INTERRUPT HANDLER
+
+void ESP32Comm_RxCpltCallback(UART_HandleTypeDef *huart) {
+  if (huart != NULL && huart == s_esp32_huart) {
+    ESP32Comm_RxCallback((char)s_rx_byte);
+  }
+}
+
+void ESP32Comm_RxCallback(char c) {
+  if (c == '\n') {
+    if (s_rx_index > 0) {
+      s_rx_buffer[s_rx_index] = '\0';
+
+      /* Chép sang pending buffer nếu chưa bị chiếm */
+      if (!s_cmd_ready) {
+        strncpy(s_pending_cmd, s_rx_buffer, RX_BUFFER_SIZE);
+        s_pending_cmd[RX_BUFFER_SIZE - 1] = '\0';
+        s_cmd_ready = true;
+      }
+      s_rx_index = 0;
+    }
+  } else if (c != '\r') {
+    if (s_rx_index < RX_BUFFER_SIZE - 1) {
+      s_rx_buffer[s_rx_index++] = c;
+    } else {
+      /* Tràn bộ đệm */
+      s_rx_index = 0;
+      ESP32Comm_SendError("BUFFER_OVERFLOW");
+    }
+  }
+
+  /* Kích hoạt lại ngắt nhận byte tiếp theo */
+  if (s_esp32_huart != NULL) {
+    HAL_UART_Receive_IT(s_esp32_huart, &s_rx_byte, 1);
+  }
+}
+
+// MOTOR CONTROL (PWM RC ESC 50Hz)
+
+void Motor_ApplyPWM(int8_t left, int8_t right) {
+  /* Giới hạn dải -100 đến 100 */
+  if (left < -100)
+    left = -100;
+  if (left > 100)
+    left = 100;
+  if (right < -100)
+    right = -100;
+  if (right > 100)
+    right = 100;
+
+  g_usv_state.motor_left = left;
+  g_usv_state.motor_right = right;
+
+  /*
+   * TIM4 Prescaler 83 (Clock = 1MHz -> 1 tick = 1us), Period = 19999 (20ms =
+   * 50Hz) RC ESC chuẩn: 1000 us: Lùi tối đa (hoặc 0 ga với ESC 1 chiều) 1500
+   * us: Trung điểm dừng (Neutral) 2000 us: Tiến tối đa
+   */
+  uint32_t pulse_left = (uint32_t)(1500 + ((int32_t)left * 5));
+  uint32_t pulse_right = (uint32_t)(1500 + ((int32_t)right * 5));
+
+  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pulse_left);
+  __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, pulse_right);
+}
+
+void Motor_Stop(void) { Motor_ApplyPWM(0, 0); }
+
+// COMMAND PARSER
+
+static void parse_mode(char *frame) {
+  char *sep = strchr(frame, '|');
+  if (!sep) {
+    ESP32Comm_SendError("INVALID_PARAMETER");
+    return;
+  }
+
+  char *mode_str = sep + 1;
+  if (strcmp(mode_str, "MANUAL") == 0) {
+    g_usv_state.mode = USV_MODE_MANUAL;
+    g_usv_state.auto_running = false;
+    Motor_Stop();
+  } else if (strcmp(mode_str, "AUTO") == 0) {
+    g_usv_state.mode = USV_MODE_AUTO;
+  } else {
+    ESP32Comm_SendError("INVALID_PARAMETER");
+  }
+}
+
+static void parse_motor(char *frame) {
+  if (g_usv_state.mode != USV_MODE_MANUAL) {
+    ESP32Comm_SendError("INVALID_STATE");
+    return;
+  }
+
+  char *p1 = strchr(frame, '|');
+  if (!p1) {
+    ESP32Comm_SendError("INVALID_PARAMETER");
+    return;
+  }
+
+  char *p2 = strchr(p1 + 1, '|');
+  if (!p2) {
+    ESP32Comm_SendError("INVALID_PARAMETER");
+    return;
+  }
+
+  *p2 = '\0';
+  int left = atoi(p1 + 1);
+  int right = atoi(p2 + 1);
+
+  if (left < -100 || left > 100 || right < -100 || right > 100) {
+    ESP32Comm_SendError("INVALID_PARAMETER");
+    return;
+  }
+
+  Motor_ApplyPWM((int8_t)left, (int8_t)right);
+}
+
+static void parse_waypoint(char *frame) {
+  char *p1 = strchr(frame, '|');
+  if (!p1) {
+    ESP32Comm_SendError("INVALID_PARAMETER");
+    return;
+  }
+
+  char *p2 = strchr(p1 + 1, '|');
+  if (!p2) {
+    ESP32Comm_SendError("INVALID_PARAMETER");
+    return;
+  }
+
+  *p2 = '\0';
+  double lat = atof(p1 + 1);
+  double lon = atof(p2 + 1);
+
+  if (lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0) {
+    ESP32Comm_SendError("INVALID_PARAMETER");
+    return;
+  }
+
+  g_usv_state.target_lat = lat;
+  g_usv_state.target_lon = lon;
+  g_usv_state.waypoint_valid = true;
+}
+
+static void parse_feed(char *frame) {
+  char *sep = strchr(frame, '|');
+  if (!sep) {
+    ESP32Comm_SendError("INVALID_PARAMETER");
+    return;
+  }
+
+  int revs = atoi(sep + 1);
+  if (revs <= 0 || revs > 10) {
+    ESP32Comm_SendError("INVALID_PARAMETER");
+    return;
+  }
+
+  /* 1 vòng quay của 28BYJ-48 (4076 bước, mỗi bước 2ms) mất khoảng 8152ms */
+  g_usv_state.feed_time_ms = (uint32_t)(revs * 8152);
+  g_usv_state.feed_active = true;
+  g_usv_state.feed_start_tick = HAL_GetTick();
+
+  /* Kích hoạt động cơ bước quay nhả mồi theo số vòng */
+  rotate_stepper((float)revs * 360.0f, 1);
+
+  if (g_usv_state.feed_percent >= 5) {
+    g_usv_state.feed_percent -= 5;
+  } else {
+    g_usv_state.feed_percent = 0;
+  }
+}
+
+// PERIODIC PROCESS (Call in main while(1))
+
+void ESP32Comm_Process(void) {
+  /* Kiểm tra và xử lý lệnh mới từ ESP32 */
+  if (s_cmd_ready) {
+    char cmd[RX_BUFFER_SIZE];
+    strncpy(cmd, s_pending_cmd, RX_BUFFER_SIZE);
+    cmd[RX_BUFFER_SIZE - 1] = '\0';
+    s_cmd_ready = false;
+
+    if (strcmp(cmd, "STOP") == 0) {
+      Motor_Stop();
+    } else if (strcmp(cmd, "AUTO_START") == 0) {
+      if (!g_usv_state.gps_valid) {
+        ESP32Comm_SendError("GPS_INVALID");
+      } else if (!g_usv_state.waypoint_valid) {
+        ESP32Comm_SendError("INVALID_STATE");
+      } else {
+        g_usv_state.mode = USV_MODE_AUTO;
+        g_usv_state.auto_running = true;
+      }
+    } else if (strcmp(cmd, "AUTO_STOP") == 0) {
+      g_usv_state.auto_running = false;
+      g_usv_state.mode = USV_MODE_MANUAL;
+      Motor_Stop();
+    } else if (strncmp(cmd, "MODE|", 5) == 0) {
+      parse_mode(cmd);
+    } else if (strncmp(cmd, "MOTOR|", 6) == 0) {
+      parse_motor(cmd);
+    } else if (strncmp(cmd, "WAYPOINT|", 9) == 0) {
+      parse_waypoint(cmd);
+    } else if (strncmp(cmd, "FEED|", 5) == 0) {
+      parse_feed(cmd);
+    } else {
+      ESP32Comm_SendError("UNKNOWN_COMMAND");
+    }
+  }
+
+  /* Kiểm tra hết thời gian rải thức ăn */
+  if (g_usv_state.feed_active) {
+    if (HAL_GetTick() - g_usv_state.feed_start_tick >=
+        g_usv_state.feed_time_ms) {
+      g_usv_state.feed_active = false;
+    }
+  }
+}
+
+/* ============================================================
+   TRANSMIT STATUS & ERROR TO ESP32
+   ============================================================ */
+
+void ESP32Comm_SendStatus(void) {
+  if (s_esp32_huart == NULL)
+    return;
+
+  char tx_buf[180];
+  int len = snprintf(tx_buf, sizeof(tx_buf),
+                     "STATUS|%.6f|%.6f|%.1f|%.2f|%.2f|%.2f|%.1f|%d|%s|%d\r\n",
+                     g_usv_state.current_lat, g_usv_state.current_lon,
+                     g_usv_state.heading, g_usv_state.speed,
+                     g_usv_state.battery_volt, g_usv_state.current_amp,
+                     g_usv_state.water_temp, g_usv_state.feed_percent,
+                     (g_usv_state.mode == USV_MODE_MANUAL) ? "MANUAL" : "AUTO",
+                     g_usv_state.gps_valid ? 1 : 0);
+
+  if (len > 0) {
+    // Gửi cho ESP32 qua s_esp32_huart (UART2)
+    HAL_UART_Transmit(s_esp32_huart, (uint8_t *)tx_buf, (uint16_t)len, 100);
+    // "Nghe lén" - Gửi bản sao y hệt ra máy tính qua huart3 (UART3)
+    HAL_UART_Transmit(&huart3, (uint8_t *)tx_buf, (uint16_t)len, 100);
+  }
+}
+
+void ESP32Comm_SendError(const char *err_code) {
+  if (s_esp32_huart == NULL || err_code == NULL)
+    return;
+
+  char tx_buf[64];
+  int len = snprintf(tx_buf, sizeof(tx_buf), "ERROR|%s\n", err_code);
+  if (len > 0) {
+    // Gửi lỗi cho ESP32 qua s_esp32_huart (UART2)
+    HAL_UART_Transmit(s_esp32_huart, (uint8_t *)tx_buf, (uint16_t)len, 50);
+    // "Nghe lén" - Gửi bản sao lỗi ra máy tính qua huart3 (UART3)
+    HAL_UART_Transmit(&huart3, (uint8_t *)tx_buf, (uint16_t)len, 50);
+  }
+}
+
+--------------------------------------------------------------------------------
+[1.4] File: STM32_Firmware/Application/Inc/nav.h
+// Chức năng: Định nghĩa cấu trúc bộ điều khiển PID và hàm tính toán điều hướng tự hành
+--------------------------------------------------------------------------------
+#ifndef NAV_H
+#define NAV_H
+
+#include "main.h"
+
+typedef struct {
+    float kp;
+    float ki;
+    float kd;
+    float prev_error;
+    float integral;
+} PID_Controller;
+
+float calculate_distance(float lat1, float lon1, float lat2, float lon2);
+float calculate_bearing(float lat1, float lon1, float lat2, float lon2);
+float update_pid(PID_Controller *pid, float setpoint, float measured, float dt);
+void auto_control_boat(float current_lat, float current_lon, float current_heading, float target_lat, float target_lon);
+
+#endif
+
+--------------------------------------------------------------------------------
+[1.5] File: STM32_Firmware/Application/Src/nav.c
+// Chức năng: Thuật toán tính khoảng cách (Haversine), góc hướng Bearing và bộ điều khiển PID giữ hướng bám tọa độ mục tiêu
+--------------------------------------------------------------------------------
+#include "nav.h"
+#include "motor.h"
+#include <math.h>
+
+#define PI 3.14159265358979323846
+#define EARTH_RADIUS 6371000.0 // Tính bằng mét
+
+float deg_to_rad(float do_goc) { return do_goc * (PI / 180.0); }
+
+float rad_to_deg(float radian) { return radian * (180.0 / PI); }
+
+// Hàm tính khoảng cách giữa 2 tọa độ GPS (Công thức Haversine)
+float calculate_distance(float lat1, float lon1, float lat2, float lon2) {
+  float dLat = deg_to_rad(lat2 - lat1);
+  float dLon = deg_to_rad(lon2 - lon1);
+  float a = sin(dLat / 2) * sin(dLat / 2) + cos(deg_to_rad(lat1)) *
+                                                cos(deg_to_rad(lat2)) *
+                                                sin(dLon / 2) * sin(dLon / 2);
+  float c = 2 * atan2(sqrt(a), sqrt(1 - a));
+  return EARTH_RADIUS * c;
+}
+
+// Hàm tính góc hướng đi từ điểm A đến điểm B (Bearing)
+float calculate_bearing(float lat1, float lon1, float lat2, float lon2) {
+  float dLon = deg_to_rad(lon2 - lon1);
+  lat1 = deg_to_rad(lat1);
+  lat2 = deg_to_rad(lat2);
+
+  float y = sin(dLon) * cos(lat2);
+  float x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
+  float angle = atan2(y, x);
+
+  angle = rad_to_deg(angle);
+  if (angle < 0) {
+    angle += 360.0; // Đảm bảo góc luôn dương
+  }
+  return angle;
+}
+
+// Hàm tính toán độ bẻ lái để giữ hướng bằng thuật toán PID
+float update_pid(PID_Controller *pid, float target, float current, float dt) {
+  // Tính sai số giữa mục tiêu và hiện tại
+  float error = target - current;
+
+  // Xử lý góc bị lật (-180 đến 180) để tàu chọn hướng quay ngắn nhất
+  if (error > 180.0f)
+    error -= 360.0f;
+  if (error < -180.0f)
+    error += 360.0f;
+
+  pid->integral += error * dt;                       // Tích phân
+  float derivative = (error - pid->prev_error) / dt; // Đạo hàm
+
+  // Công thức PID kinh điển
+  float result =
+      (pid->kp * error) + (pid->ki * pid->integral) + (pid->kd * derivative);
+  pid->prev_error = error; // Lưu lại sai số cho lần sau
+
+  return result;
+}
+
+extern PID_Controller heading_pid;
+
+// Hàm chính điều khiển tàu tự động đi tới mục tiêu
+void auto_control_boat(float current_lat, float current_lon,
+                       float current_heading, float target_lat,
+                       float target_lon) {
+  // 1. Tính xem còn cách đích bao xa
+  float distance =
+      calculate_distance(current_lat, current_lon, target_lat, target_lon);
+
+  if (distance < 2.0) {
+    // Đã đến nơi (Sai số dưới 2 mét)
+    motor_set_speed(1500, 1500); // Dừng lại
+    return;
+  }
+
+  // 2. Tính xem cần quay mặt về hướng nào
+  float target_heading =
+      calculate_bearing(current_lat, current_lon, target_lat, target_lon);
+
+  // 3. Tính toán lực bẻ lái cần thiết để quay mũi tàu đúng hướng
+  float steering_force =
+      update_pid(&heading_pid, target_heading, current_heading,
+                 0.1); // Thời gian 1 chu kỳ là 0.1 giây (10Hz)
+
+  // 4. Pha trộn lực bẻ lái vào tốc độ tiến tới
+  int base_speed = 1650; // Tốc độ chạy thẳng (1500 là dừng, >1500 là tới)
+
+  int left_speed = base_speed + (int)steering_force;
+  int right_speed = base_speed - (int)steering_force;
+
+  // 5. Giới hạn tốc độ trong mức an toàn của tín hiệu PWM (1100 đến 1900)
+  if (left_speed > 1900)
+    left_speed = 1900;
+  if (left_speed < 1100)
+    left_speed = 1100;
+  if (right_speed > 1900)
+    right_speed = 1900;
+  if (right_speed < 1100)
+    right_speed = 1100;
+
+  // 6. Gửi tín hiệu xuống động cơ
+  motor_set_speed(left_speed, right_speed);
+}
+
+--------------------------------------------------------------------------------
+[1.6] File: STM32_Firmware/Application/Inc/motor.h
+// Chức năng: Khai báo các hàm điều khiển động cơ chân vịt
+--------------------------------------------------------------------------------
+#ifndef MOTOR_H
+#define MOTOR_H
+
+void motor_init(void);
+void motor_set_speed(int left, int right);
+
+#endif
+
+--------------------------------------------------------------------------------
+[1.7] File: STM32_Firmware/Application/Src/PWM_Motor.c
+// Chức năng: Điều khiển phát xung PWM (Timer 4) cho bộ điều tốc ESC của 2 động cơ chân vịt trái/phải
+--------------------------------------------------------------------------------
+#include "tim.h"   // Thu vien dieu khien TIMER
+#include "../../Application/Inc/motor.h" // Goi thu vien motor
+
+// Hàm khởi tạo 2 động cơ
+void motor_init(void)
+{
+    HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+    HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
+}
+
+// Hàm set tốc độ cho 2 động cơ trái phải
+void motor_set_speed(int left, int right)
+{
+    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, left);
+    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, right);
+}
+
+--------------------------------------------------------------------------------
+[1.8] File: STM32_Firmware/Application/Inc/stepper.h
+// Chức năng: Khai báo hàm điều khiển động cơ bước cơ cấu nhả mồi/rải thức ăn
+--------------------------------------------------------------------------------
+#ifndef STEPPER_H
+#define STEPPER_H
+
+#include "main.h"
+
+#define STEPPER_IN1_Pin 2
+#define STEPPER_IN2_Pin 3
+#define STEPPER_IN3_Pin 4
+#define STEPPER_IN4_Pin 5
+
+void step_motor(uint8_t step);
+void rotate_stepper(float angle, uint8_t direction);
+void drop_bait(uint32_t duration_ms);
+void stepper_update(void);
+
+#endif
+
+--------------------------------------------------------------------------------
+[1.9] File: STM32_Firmware/Application/Src/stepper.c
+// Chức năng: Thuật toán điều khiển động cơ bước 28BYJ-48 half-step theo máy trạng thái non-blocking
+--------------------------------------------------------------------------------
+#include "../../Application/Inc/stepper.h"
+
+// Trình tự kích xung half-step cho động cơ 28BYJ-48
+const uint8_t step_sequence[8] = {
+    0b0001, // 1
+    0b0011, // 3
+    0b0010, // 2
+    0b0110, // 6
+    0b0100, // 4
+    0b1100, // 12
+    0b1000, // 8
+    0b1001  // 9
+};
+
+// Hàm kích một bước
+void step_motor(uint8_t step) {
+  HAL_GPIO_WritePin(INT1_GPIO_Port, INT1_Pin,
+                    (step_sequence[step] & 0x01) ? GPIO_PIN_SET
+                                                    : GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(INT2_GPIO_Port, INT2_Pin,
+                    (step_sequence[step] & 0x02) ? GPIO_PIN_SET
+                                                    : GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(INT3_GPIO_Port, INT3_Pin,
+                    (step_sequence[step] & 0x04) ? GPIO_PIN_SET
+                                                    : GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(INT4_GPIO_Port, INT4_Pin,
+                    (step_sequence[step] & 0x08) ? GPIO_PIN_SET
+                                                    : GPIO_PIN_RESET);
+}
+
+// --- CÁC BIẾN CHO STATE MACHINE (NON-BLOCKING) ---
+static uint32_t stepper_target_steps = 0;
+static uint32_t stepper_current_step = 0;
+static uint8_t stepper_direction = 1;
+static uint32_t last_step_time = 0;
+
+// Hàm thiết lập mục tiêu góc xoay
+void rotate_stepper(float angle, uint8_t direction) {
+  // Thay vì chạy vòng lặp bắt main chờ, ta chỉ lưu lại mục tiêu số bước
+  stepper_target_steps = (uint32_t)((angle / 360.0f) * 4076.0f);
+  stepper_current_step = 0;
+  stepper_direction = direction;
+}
+
+// Hàm thực hiện hành động rải mồi theo thời gian
+void drop_bait(uint32_t duration_ms) {
+  // Đặt mục tiêu số bước theo thời gian (1 bước tốn 2ms)
+  stepper_target_steps = duration_ms / 2;
+  stepper_current_step = 0;
+  stepper_direction = 1; // Thuận
+}
+
+// Hàm này BẮT BUỘC phải được gọi liên tục bên trong vòng lặp while(1) của main.c
+void stepper_update(void) {
+  // Nếu vẫn chưa đi hết số bước mục tiêu
+  if (stepper_current_step < stepper_target_steps) {
+    // Đủ 2 mili-giây thì nhích thêm 1 bước
+    if (HAL_GetTick() - last_step_time >= 2) {
+      last_step_time = HAL_GetTick();
+
+      if (stepper_direction) { // Quay thuận
+        step_motor(stepper_current_step % 8);
+      } else { // Quay ngược
+        step_motor(7 - (stepper_current_step % 8));
+      }
+
+      stepper_current_step++;
+
+      // Nếu vừa đạt tới bước cuối cùng thì tắt điện động cơ cho đỡ nóng
+      if (stepper_current_step >= stepper_target_steps) {
+        HAL_GPIO_WritePin(INT1_GPIO_Port, INT1_Pin | INT2_Pin | INT3_Pin | INT4_Pin,
+                          GPIO_PIN_RESET);
+      }
+    }
+  }
+}
+
+--------------------------------------------------------------------------------
+[1.10] File: STM32_Firmware/Drivers/ATGM336H/atgm336.h
+// Chức năng: Định nghĩa cấu trúc dữ liệu tọa độ GPS ATGM336H
+--------------------------------------------------------------------------------
+#ifndef __ATGM336H_H
+#define __ATGM336H_H
+
+#include "stm32f4xx_hal.h"
+#include <stdint.h>
+
+/* Structure to hold the parsed GPS data */
+typedef struct {
+    float latitude;      // Latitude in decimal degrees
+    float longitude;     // Longitude in decimal degrees
+    float speed_knots;   // Speed in knots
+    float speed_kph;     // Speed in kilometers per hour
+    float course;        // Course over ground in degrees
+    float altitude;      // Altitude in meters
+    uint8_t fix_quality; // 0 = Invalid, 1 = GPS fix, 2 = DGPS fix
+    uint8_t satellites;  // Number of satellites in view
+    uint8_t valid;       // 1 = Data valid, 0 = Data invalid
+} ATGM336H_Data_t;
+
+/* Initialize the ATGM336H data structure */
+void ATGM336H_Init(ATGM336H_Data_t *gps_data);
+
+/* Process a single character received from UART.
+ * Call this function inside HAL_UART_RxCpltCallback or your polling loop.
+ * Returns 1 if a complete valid sentence was successfully parsed, 0 otherwise.
+ */
+uint8_t ATGM336H_ProcessChar(char c, ATGM336H_Data_t *gps_data);
+
+#endif /* __ATGM336H_H */
+
+--------------------------------------------------------------------------------
+[1.11] File: STM32_Firmware/Drivers/ATGM336H/atgm336.c
+// Chức năng: Driver giải mã bản tin NMEA ($GNRMC) lấy tọa độ kinh độ, vĩ độ và vận tốc
+--------------------------------------------------------------------------------
+#include "atgm336.h"
+#include <string.h>
+#include <stdlib.h>
+
+#define ATGM336H_BUFFER_SIZE 128
+
+static char rx_buffer[ATGM336H_BUFFER_SIZE];
+static uint16_t rx_index = 0;
+
+void ATGM336H_Init(ATGM336H_Data_t *gps_data) {
+    memset(gps_data, 0, sizeof(ATGM336H_Data_t));
+    rx_index = 0;
+}
+
+// Helper to convert NMEA coordinate (ddmm.mmmm) to decimal degrees
+static float NMEA_To_Decimal(float nmea_coord, char direction) {
+    int degrees = (int)(nmea_coord / 100);
+    float minutes = nmea_coord - (degrees * 100);
+    float decimal = degrees + (minutes / 60.0f);
+
+    if (direction == 'S' || direction == 'W') {
+        decimal = -decimal;
+    }
+    return decimal;
+}
+
+// Parses a complete NMEA sentence
+static uint8_t ATGM336H_ParseSentence(char *sentence, ATGM336H_Data_t *gps_data) {
+    char *p = sentence;
+    char *fields[20];
+    int field_count = 0;
+
+    // Split the sentence by commas, preserving empty fields
+    fields[field_count++] = p;
+    while (*p && field_count < 20) {
+        if (*p == ',') {
+            *p = '\0';
+            fields[field_count++] = p + 1;
+        }
+        p++;
+    }
+
+    // Ensure we have a command field
+    if (field_count == 0) return 0;
+
+    // Check if it's an RMC sentence (Recommended Minimum Specific GNSS Data)
+    if (strncmp(fields[0], "$GNRMC", 6) == 0 || strncmp(fields[0], "$GPRMC", 6) == 0) {
+        if (field_count > 9) {
+            // Field 2: Status (A = Active, V = Void)
+            if (fields[2][0] == 'A') gps_data->valid = 1;
+            else gps_data->valid = 0;
+
+            // Field 3: Latitude, Field 4: N/S indicator
+            if (strlen(fields[3]) > 0 && strlen(fields[4]) > 0) {
+                gps_data->latitude = NMEA_To_Decimal(atof(fields[3]), fields[4][0]);
+            }
+
+            // Field 5: Longitude, Field 6: E/W indicator
+            if (strlen(fields[5]) > 0 && strlen(fields[6]) > 0) {
+                gps_data->longitude = NMEA_To_Decimal(atof(fields[5]), fields[6][0]);
+            }
+
+            // Field 7: Speed over ground in knots
+            if (strlen(fields[7]) > 0) {
+                gps_data->speed_knots = atof(fields[7]);
+                gps_data->speed_kph = gps_data->speed_knots * 1.852f;
+            }
+
+            // Field 8: Course over ground in degrees
+            if (strlen(fields[8]) > 0) {
+                gps_data->course = atof(fields[8]);
+            }
+            return 1;
+        }
+    }
+    // Check if it's a GGA sentence (Global Positioning System Fix Data)
+    else if (strncmp(fields[0], "$GNGGA", 6) == 0 || strncmp(fields[0], "$GPGGA", 6) == 0) {
+        if (field_count > 9) {
+            // Field 6: Fix quality
+            if (strlen(fields[6]) > 0) {
+                gps_data->fix_quality = atoi(fields[6]);
+            }
+
+            // Field 7: Number of satellites
+            if (strlen(fields[7]) > 0) {
+                gps_data->satellites = atoi(fields[7]);
+            }
+
+            // Field 9: Altitude
+            if (strlen(fields[9]) > 0) {
+                gps_data->altitude = atof(fields[9]);
+            }
+            return 1;
+        }
+    }
+
+    return 0; // Not a sentence we care about or not enough fields
+}
+
+uint8_t ATGM336H_ProcessChar(char c, ATGM336H_Data_t *gps_data) {
+    if (c == '$') {
+        rx_index = 0;
+        rx_buffer[rx_index++] = c;
+    } else if (rx_index > 0 && rx_index < ATGM336H_BUFFER_SIZE - 1) {
+        rx_buffer[rx_index++] = c;
+        if (c == '\n') { // End of sentence
+            rx_buffer[rx_index] = '\0'; // Null-terminate
+
+            // Temporary buffer because parsing modifies the string
+            char temp_buffer[ATGM336H_BUFFER_SIZE];
+            strcpy(temp_buffer, rx_buffer);
+
+            uint8_t parsed = ATGM336H_ParseSentence(temp_buffer, gps_data);
+            rx_index = 0;
+            return parsed;
+        }
+    } else if (rx_index >= ATGM336H_BUFFER_SIZE - 1) {
+        // Buffer overflow, reset
+        rx_index = 0;
+    }
+    return 0;
+}
+
+--------------------------------------------------------------------------------
+[1.12] File: STM32_Firmware/Drivers/QM5883P/QM5883P.h
+// Chức năng: Định nghĩa thanh ghi và cấu trúc la bàn từ trường số QMC5883P/QMC5883L
+--------------------------------------------------------------------------------
+#ifndef QMC5883P_H
+#define QMC5883P_H
+
+#include "i2c.h"
+#include <stdint.h>
+
+// Struct chứa dữ liệu từ trường (Từ kế)
+typedef struct {
+  int16_t MagX, MagY, MagZ; // Dữ liệu thô (raw)
+  float Mx, My, Mz;         // Từ trường (đơn vị: Gauss)
+} QMC5883P_Data_t;
+
+HAL_StatusTypeDef QMC5883P_Init(void);
+void QMC5883P_ReadRaw(QMC5883P_Data_t *data);
+
+#endif
+
+--------------------------------------------------------------------------------
+[1.13] File: STM32_Firmware/Drivers/QM5883P/QM5883P.c
+// Chức năng: Driver giao tiếp I2C đọc giá trị từ trường 3 trục và xác định góc hướng (Heading)
+--------------------------------------------------------------------------------
+#include "QM5883P.h"
+
+#define QMC5883P_ADDR (0x2C << 1) // HP5883L Address
+
+// BẮT BUỘC PHẢI DÙNG CÁC THANH GHI NÀY CHO HP5883L (Bị dịch 1 bậc so với QMC
+// cũ)
+#define QMC_DATA_START 0x01
+#define QMC_CTRL_REG1 0x0A
+#define QMC_CTRL_REG2 0x0B
+#define QMC_SET_RESET 0x0C
+
+extern I2C_HandleTypeDef hi2c1;
+
+HAL_StatusTypeDef QMC5883P_Init(void) {
+  uint8_t config = 0;
+  // 1. Setting SET/RESET Period by Datasheet
+  config = 0x01;
+  HAL_StatusTypeDef status = HAL_I2C_Mem_Write(
+      &hi2c1, QMC5883P_ADDR, QMC_SET_RESET, 1, &config, 1, 1000);
+  // 2. Setting Control Register 1 (QMC5883P: OSR=4, ODR=200Hz, MODE=Continuous)
+  // -> 0x1F
+  config = 0x1F;
+  HAL_I2C_Mem_Write(&hi2c1, QMC5883P_ADDR, QMC_CTRL_REG1, 1, &config, 1, 1000);
+  HAL_Delay(10);
+  return status;
+}
+
+void QMC5883P_ReadRaw(QMC5883P_Data_t *data) {
+  uint8_t buffer[6] = {
+      0}; // QMC5883P has 3 axis X, Y, Z. Each bit respective two byte
+
+  // Read 6 byte, begin from 0x01 to 0x06
+  HAL_StatusTypeDef status = HAL_I2C_Mem_Read(
+      &hi2c1, QMC5883P_ADDR, QMC_DATA_START, 1, buffer, 6, 1000);
+
+  if (status == HAL_OK) {
+    // Lưu ý cực kỳ quan trọng: QMC5883P truyền byte LSB (thấp) trước, MSB (cao)
+    // sau
+    data->MagX = (int16_t)(buffer[1] << 8 | buffer[0]);
+    data->MagY = (int16_t)(buffer[3] << 8 | buffer[2]);
+    data->MagZ = (int16_t)(buffer[5] << 8 | buffer[4]);
+
+    // Chuyển đổi sang đơn vị vật lý (Gauss).
+    // Với dải đo (RNG) = 8G, hệ số độ phân giải là 3000 LSB/Gauss
+    data->Mx = data->MagX / 3000.0f;
+    data->My = data->MagY / 3000.0f;
+    data->Mz = data->MagZ / 3000.0f;
+  } else if (status == HAL_ERROR) {
+    uint32_t err_code = HAL_I2C_GetError(&hi2c1);
+    uint8_t value_err = 0;
+    if (err_code == HAL_I2C_ERROR_AF) // Lỗi sai địa chỉ hoặc hỏng dây, NACK
+    {
+      value_err = 1;
+    } else if (err_code == HAL_I2C_ERROR_BERR) // Do nhiễu đường truyền hoặc
+                                               // thiếu điện trở kéo lên
+    {
+      value_err = 2;
+    } else if (err_code == HAL_I2C_ERROR_ARLO) // Tranh chấp Bus
+    {
+      value_err = 3;
+    }
+    data->MagX = value_err;
+    data->MagY = value_err;
+    data->MagZ = value_err;
+
+    float value_err_f = (float)value_err;
+
+    data->Mx = value_err_f;
+    data->My = value_err_f;
+    data->Mz = value_err_f;
+    HAL_I2C_DeInit(&hi2c1);
+    HAL_I2C_Init(&hi2c1);
+  }
+}
+
+--------------------------------------------------------------------------------
+[1.14] File: STM32_Firmware/Drivers/mpu6050/mpu6050.h
+// Chức năng: Định nghĩa thông số cảm biến chuyển động và góc nghiêng 6 trục IMU MPU6050
+--------------------------------------------------------------------------------
+#ifndef MPU6050_H
+#define MPU6050_H
+
+#include "i2c.h"
+#include <stdint.h>
+
+typedef struct {
+  int16_t AccX, AccY, AccZ;    // Dữ liệu gia tốc thô (raw)
+  int16_t GyroX, GyroY, GyroZ; // Dữ liệu tốc độ thô (raw)
+
+  float Ax, Ay, Az; // Gia tốc tuyến tính (đơn vị: g)
+  float Gx, Gy, Gz; // Tốc độ góc (đơn vị: deg/s)
+} MPU6050_Data_t;
+
+HAL_StatusTypeDef MPU6050_Init(void);
+void MPU6050_ReadRaw(MPU6050_Data_t *data);
+
+#endif
+
+--------------------------------------------------------------------------------
+[1.15] File: STM32_Firmware/Drivers/mpu6050/mpu6050.c
+// Chức năng: Driver I2C đọc dữ liệu gia tốc và vận tốc góc để đo độ nghiêng của tàu
+--------------------------------------------------------------------------------
+#define MPU6050_ADDR (0x68 << 1) // Dia chi cua con cam bien
+#define MPU6050_PWR 0x6B // Dia chi o nho dung de luu du lieu dau tien tra ve
+#define MPU6050_DATA 0x3B
+
+#include "mpu6050.h"
+extern I2C_HandleTypeDef hi2c1;
+
+HAL_StatusTypeDef MPU6050_Init(void) {
+  uint8_t data = 0;
+  HAL_StatusTypeDef status =
+      HAL_I2C_Mem_Write(&hi2c1, MPU6050_ADDR, MPU6050_PWR, 1, &data, 1, 1000);
+  HAL_Delay(10); // Đợi cảm biến khởi động sau khi thoát chế độ sleep
+  return status;
+}
+
+void MPU6050_ReadRaw(MPU6050_Data_t *data) {
+  uint8_t buffer[14] = {0}; // Khởi tạo mảng bằng 0 để tránh rác từ stack
+
+  HAL_StatusTypeDef status =
+      HAL_I2C_Mem_Read(&hi2c1, MPU6050_ADDR, MPU6050_DATA, 1, buffer, 14, 1000);
+
+  if (status == HAL_OK) {
+    data->AccX = (int16_t)(buffer[0] << 8 | buffer[1]);
+    data->AccY = (int16_t)(buffer[2] << 8 | buffer[3]);
+    data->AccZ = (int16_t)(buffer[4] << 8 | buffer[5]);
+    // Bỏ qua buffer 6 và 7 vì đó là các bit lưu nhiệt độ
+    data->GyroX = (int16_t)(buffer[8] << 8 | buffer[9]);
+    data->GyroY = (int16_t)(buffer[10] << 8 | buffer[11]);
+    data->GyroZ = (int16_t)(buffer[12] << 8 | buffer[13]);
+
+    // Chuyển đổi sang đơn vị vật lý thực tế
+    // Dải đo mặc định +-2g, 1g tương ứng với 16384 LSB (65536/4)
+    data->Ax = data->AccX / 16384.0f;
+    data->Ay = data->AccY / 16384.0f;
+    data->Az = data->AccZ / 16384.0f;
+
+    // Ở dải đo mặc định +-250 deg/s, 1 độ/s tương ứng với 131 LSB (65536/500)
+    data->Gx = data->GyroX / 131.0f;
+    data->Gy = data->GyroY / 131.0f;
+    data->Gz = data->GyroZ / 131.0f;
+  } else if (status == HAL_ERROR) {
+    uint32_t err_code = HAL_I2C_GetError(&hi2c1);
+    uint8_t value_err = 0;
+    if (err_code == HAL_I2C_ERROR_AF) { // Lỗi sai địa chỉ hoặc hỏng dây, NACK
+      value_err = 1;
+    } else if (err_code == HAL_I2C_ERROR_BERR) { // Do nhiễu đường truyền hoặc
+                                                 // thiếu điện trở kéo lên
+      value_err = 2;
+    } else if (err_code == HAL_I2C_ERROR_ARLO) { // Tranh chấp Bus
+      value_err = 3;
+    }
+
+    data->AccX = value_err;
+    data->AccY = value_err;
+    data->AccZ = value_err;
+    data->GyroX = value_err;
+    data->GyroY = value_err;
+    data->GyroZ = value_err;
+
+    float value_err_f = (float)value_err;
+
+    data->Ax = value_err_f;
+    data->Ay = value_err_f;
+    data->Az = value_err_f;
+    data->Gx = value_err_f;
+    data->Gy = value_err_f;
+    data->Gz = value_err_f;
+
+    HAL_I2C_DeInit(&hi2c1);
+    HAL_I2C_Init(&hi2c1);
+  }
+}
+
+--------------------------------------------------------------------------------
+[1.16] File: STM32_Firmware/Drivers/ds18b20/ds18b20.h
+// Chức năng: Định nghĩa giao tiếp cảm biến nhiệt độ nước chống thấm DS18B20
+--------------------------------------------------------------------------------
+#ifndef DS18B20_H
+#define DS18B20_H
+
+#include "stm32f4xx_hal.h"
+
+// Cấu hình chân kết nối DS18B20 (DQ)
+#define DS18B20_PORT GPIOE
+#define DS18B20_PIN  GPIO_PIN_11
+
+void DS18B20_Init(void);
+void DS18B20_Request_Temp(void);
+float DS18B20_Read_Temp(void);
+
+#endif // DS18B20_H
+
+--------------------------------------------------------------------------------
+[1.17] File: STM32_Firmware/Drivers/ds18b20/ds18b20.c
+// Chức năng: Driver chuẩn giao tiếp 1-Wire đọc nhiệt độ môi trường nước
+--------------------------------------------------------------------------------
+#include "ds18b20.h"
+
+// --- Hàm trễ microsecond bằng DWT ---
+static void DWT_Delay_Init(void) {
+  // Cho phép đếm chu kỳ (TRCENA)
+  CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  // Reset bộ đếm
+  DWT->CYCCNT = 0;
+  // Kích hoạt bộ đếm
+  DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
+
+static void delay_us(uint32_t us) {
+  uint32_t startTick = DWT->CYCCNT;
+  // SystemCoreClock lưu tần số của chip (168MHz cho STM32F407)
+  uint32_t delayTicks = us * (SystemCoreClock / 1000000);
+  while ((DWT->CYCCNT - startTick) < delayTicks)
+    ;
+}
+
+// --- Các hàm cấp thấp 1-Wire ---
+static void DS18B20_Set_Pin_Output(void) {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  GPIO_InitStruct.Pin = DS18B20_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(DS18B20_PORT, &GPIO_InitStruct);
+}
+
+static void DS18B20_Set_Pin_Input(void) {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  GPIO_InitStruct.Pin = DS18B20_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(DS18B20_PORT, &GPIO_InitStruct);
+}
+
+static uint8_t DS18B20_Reset(void) {
+  uint8_t response = 0;
+  DS18B20_Set_Pin_Output();
+  HAL_GPIO_WritePin(DS18B20_PORT, DS18B20_PIN, GPIO_PIN_RESET);
+  delay_us(480);
+
+  DS18B20_Set_Pin_Input();
+  delay_us(80);
+
+  if (!(HAL_GPIO_ReadPin(DS18B20_PORT, DS18B20_PIN))) {
+    response = 1; // Có cảm biến phản hồi
+  } else {
+    response = 0; // Không tìm thấy cảm biến
+  }
+  delay_us(400); // Đợi kết thúc chu kỳ reset
+  return response;
+}
+
+static void DS18B20_Write_Bit(uint8_t bit) {
+  DS18B20_Set_Pin_Output();
+  if (bit) {
+    HAL_GPIO_WritePin(DS18B20_PORT, DS18B20_PIN, GPIO_PIN_RESET);
+    delay_us(2);
+    DS18B20_Set_Pin_Input(); // Nhả bit lên cao
+    delay_us(60);
+  } else {
+    HAL_GPIO_WritePin(DS18B20_PORT, DS18B20_PIN, GPIO_PIN_RESET);
+    delay_us(60);
+    DS18B20_Set_Pin_Input();
+    delay_us(2);
+  }
+}
+
+static uint8_t DS18B20_Read_Bit(void) {
+  uint8_t bit = 0;
+  DS18B20_Set_Pin_Output();
+  HAL_GPIO_WritePin(DS18B20_PORT, DS18B20_PIN, GPIO_PIN_RESET);
+  delay_us(2);
+
+  DS18B20_Set_Pin_Input();
+  delay_us(10);
+
+  if (HAL_GPIO_ReadPin(DS18B20_PORT, DS18B20_PIN)) {
+    bit = 1;
+  }
+  delay_us(50);
+  return bit;
+}
+
+static void DS18B20_Write_Byte(uint8_t data) {
+  for (int i = 0; i < 8; i++) {
+    DS18B20_Write_Bit(data & 0x01);
+    data >>= 1;
+  }
+}
+
+static uint8_t DS18B20_Read_Byte(void) {
+  uint8_t data = 0;
+  for (int i = 0; i < 8; i++) {
+    data >>= 1;
+    if (DS18B20_Read_Bit()) {
+      data |= 0x80;
+    }
+  }
+  return data;
+}
+
+// --- API ---
+
+void DS18B20_Init(void) {
+  DWT_Delay_Init();
+  // Bật xung nhịp cho port
+  if (DS18B20_PORT == GPIOE) {
+    __HAL_RCC_GPIOE_CLK_ENABLE();
+  }
+}
+
+void DS18B20_Request_Temp(void) {
+  if (DS18B20_Reset()) {
+    DS18B20_Write_Byte(0xCC); // Skip ROM
+    DS18B20_Write_Byte(0x44); // Convert T
+  }
+}
+
+float DS18B20_Read_Temp(void) {
+  uint8_t temp_l, temp_h;
+  uint16_t temp;
+  float temperature = -999.0f; // Trả về giá trị này nếu lỗi
+
+  if (DS18B20_Reset()) {
+    DS18B20_Write_Byte(0xCC); // Skip ROM
+    DS18B20_Write_Byte(0xBE); // Read Scratchpad
+
+    temp_l = DS18B20_Read_Byte();
+    temp_h = DS18B20_Read_Byte();
+
+    temp = (temp_h << 8) | temp_l;
+    temperature = (float)temp / 16.0f;
+  }
+  return temperature;
+}
+
+================================================================================
+
+#2. CHƯƠNG TRÌNH ESP32 (TRUYỀN THÔNG & TRẠM PHÁT WIFI ACCESS POINT)
+#Chức năng: Khởi tạo mạng WiFi nội bộ (SoftAP) không cần Internet; thiết lập máy chủ HTTP Web Server phục vụ giao diện điều khiển và các RESTful API (/command, /status); làm cầu nối giao tiếp UART hai chiều với STM32 (chuyển tiếp lệnh từ Web xuống vi điều khiển và đồng bộ dữ liệu trạng thái).
+
+--------------------------------------------------------------------------------
+[2.1] File: ESP32_Firmware/src/config.h
+// Chức năng: Cấu hình tên mạng WiFi SoftAP, chân UART và tốc độ Baudrate (Mật khẩu đã được ẩn theo quy định bảo mật)
+--------------------------------------------------------------------------------
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// Cấu hình Wifi AP
+#define AP_SSID "USV_MINI"
+#define AP_PASSWORD "********" // [BẢO MẬT] Mật khẩu đã được ẩn theo quy định
+
+// Cấu hình UART
+#define STM32_RX_PIN 16
+#define STM32_TX_PIN 17
+
+// Tốc độ truyền dữ liệu
+#define UART_BAUDRATE 115200
+
+#endif // CONFIG_H
+
+--------------------------------------------------------------------------------
+[2.2] File: ESP32_Firmware/src/main.cpp
+// Chức năng: Chương trình chính ESP32: Quản lý WiFi AP, Web Server, xử lý REST API và phân tích khung truyền UART
+--------------------------------------------------------------------------------
+#include "config.h"
+#include "web.h"
+#include <Arduino.h>
+#include <WebServer.h>
+#include <WiFi.h>
+
+WebServer server(80);
+HardwareSerial STM32Serial(2);
+String rxBuffer;
+
+// Function prototypes
+void sendCommand(const String &command);
+void receiveSTM32();
+void parseSTM32Frame(String frame);
+void parseStatus(String frame);
+void parseError(String frame);
+int splitFrame(String frame, String fields[], int maxFields);
+void handleRoot();
+void handleCommand();
+void handleStatus();
+
+// Telemetry Data
+String latitude = "0.000000";
+String longitude = "0.000000";
+String heading = "0.0";
+String speed = "0.00";
+String battery = "0.00";
+String current = "0.00";
+String temp = "0.0";
+String feed = "0";
+String mode = "MANUAL";
+String gps = "0";
+String lastError = "";
+
+// Gửi lệnh điều khiển xuống STM32 qua UART
+void sendCommand(const String &command) {
+  STM32Serial.print(command);
+  STM32Serial.print('\n');
+  // Không in log cổng Serial USB đối với lệnh MOTOR liên tục để tránh nghẽn CPU/UART
+  if (!command.startsWith("MOTOR|")) {
+    Serial.print("[TX] ");
+    Serial.println(command);
+  }
+}
+
+// Nhận dữ liệu UART từ STM32
+void receiveSTM32() {
+  while (STM32Serial.available()) {
+    char c = STM32Serial.read();
+    if (c == '\n') {
+      rxBuffer.trim();
+      if (rxBuffer.length() > 0) {
+        parseSTM32Frame(rxBuffer);
+      }
+      rxBuffer = "";
+    } else {
+      if (rxBuffer.length() < 200) {
+        rxBuffer += c;
+      } else {
+        rxBuffer = "";
+        Serial.println("[ERROR] RX buffer overflow");
+      }
+    }
+  }
+}
+
+// Phân tích khung truyền nhận từ STM32
+void parseSTM32Frame(String frame) {
+  Serial.print("[RX] ");
+  Serial.println(frame);
+
+  if (frame.startsWith("STATUS|")) {
+    parseStatus(frame);
+  } else if (frame.startsWith("ERROR|")) {
+    parseError(frame);
+  } else {
+    Serial.println("[ERROR] Unknown frame type");
+  }
+}
+
+// Phân tích bản tin STATUS định kỳ
+void parseStatus(String frame) {
+  String fields[11];
+  int count = splitFrame(frame, fields, 11);
+  if (count != 11) {
+    Serial.print("[STATUS] Invalid field count: ");
+    Serial.println(count);
+    return;
+  }
+
+  latitude = fields[1];
+  longitude = fields[2];
+  heading = fields[3];
+  speed = fields[4];
+  battery = fields[5];
+  current = fields[6];
+  temp = fields[7];
+  feed = fields[8];
+  mode = fields[9];
+  gps = fields[10];
+  lastError = "";
+}
+
+// Phân tích bản tin ERROR
+void parseError(String frame) {
+  int separator = frame.indexOf('|');
+  if (separator < 0) {
+    Serial.println("[ERROR] Invalid ERROR frame");
+    return;
+  }
+  lastError = frame.substring(separator + 1);
+  Serial.print("[STM32 ERROR] ");
+  Serial.println(lastError);
+}
+
+// Tách chuỗi theo ký tự '|'
+int splitFrame(String frame, String fields[], int maxFields) {
+  int count = 0;
+  int start = 0;
+  while (count < maxFields) {
+    int separator = frame.indexOf('|', start);
+    if (separator < 0) {
+      fields[count++] = frame.substring(start);
+      break;
+    }
+    fields[count++] = frame.substring(start, separator);
+    start = separator + 1;
+  }
+  return count;
+}
+
+// HTTP handler phục vụ trang web
+void handleRoot() {
+  server.send_P(200, "text/html; charset=UTF-8", INDEX_HTML);
+}
+
+// HTTP handler nhận lệnh điều khiển
+void handleCommand() {
+  if (!server.hasArg("cmd")) {
+    server.send(400, "text/plain", "Missing cmd");
+    return;
+  }
+  String command = server.arg("cmd");
+  command.trim();
+  if (command.length() == 0) {
+    server.send(400, "text/plain", "Empty command");
+    return;
+  }
+  if (command.length() > 100) {
+    server.send(400, "text/plain", "Command too long");
+    return;
+  }
+  sendCommand(command);
+  server.send(200, "text/plain", "OK");
+}
+
+// HTTP handler trả về trạng thái JSON
+void handleStatus() {
+  String json;
+  json.reserve(220);
+  json = "{\"lat\":\"" + latitude + "\",";
+  json += "\"lon\":\"" + longitude + "\",";
+  json += "\"heading\":\"" + heading + "\",";
+  json += "\"speed\":\"" + speed + "\",";
+  json += "\"battery\":\"" + battery + "\",";
+  json += "\"current\":\"" + current + "\",";
+  json += "\"temp\":\"" + temp + "\",";
+  json += "\"feed\":\"" + feed + "\",";
+  json += "\"mode\":\"" + mode + "\",";
+  json += "\"gps\":\"" + gps + "\",";
+  json += "\"error\":\"" + lastError + "\"}";
+  server.send(200, "application/json", json);
+}
+
+void setup() {
+  Serial.begin(115200);
+  STM32Serial.begin(UART_BAUDRATE, SERIAL_8N1, STM32_RX_PIN, STM32_TX_PIN);
+
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(AP_SSID, AP_PASSWORD);
+
+  Serial.println();
+  Serial.print("WiFi SSID: ");
+  Serial.println(AP_SSID);
+  Serial.print("WiFi IP: ");
+  Serial.println(WiFi.softAPIP());
+
+  server.on("/", HTTP_GET, handleRoot);
+  server.on("/command", HTTP_GET, handleCommand);
+  server.on("/status", HTTP_GET, handleStatus);
+  server.begin();
+  Serial.println("HTTP server started");
+
+  delay(500);
+  sendCommand("MODE|MANUAL");
+  sendCommand("STOP");
+}
+
+void loop() {
+  receiveSTM32();
+  server.handleClient();
+}
+
+================================================================================
+
+#3. CHƯƠNG TRÌNH GIAO DIỆN WEB (WEB DASHBOARD INTERFACE)
+#Chức năng: Giao diện người dùng Web Dashboard trực quan (HTML5/CSS3/JavaScript); hiển thị thời gian thực các thông số cảm biến (kinh độ, vĩ độ, la bàn, tốc độ, điện áp pin, dòng điện, nhiệt độ nước...); cung cấp bộ điều khiển chân vịt trực tiếp (Sliders/Joystick), chuyển đổi chế độ Manual/Auto, ra lệnh rải mồi và tự động cập nhật trạng thái qua HTTP polling/Fetch API.
+
+--------------------------------------------------------------------------------
+[3.1] File: ESP32_Firmware/src/web.html
+// Chức năng: Toàn bộ mã nguồn giao diện Web Dashboard (HTML5 ngữ nghĩa, thiết kế CSS hiện đại Glassmorphism và kịch bản JavaScript điều khiển AJAX/Fetch API)
+--------------------------------------------------------------------------------
 <!DOCTYPE html>
 <html lang="vi">
 
@@ -16,9 +1718,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
     <meta name="format-detection" content="telephone=no">
     <title>USV MINI - Trạm Điều Khiển</title>
 
-    <!-- Font Awesome (Hỗ trợ hiển thị online) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
+
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
         rel="stylesheet">
@@ -717,7 +2418,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             width: 100%;
         }
 
-
         /* SPEED SCALE VẠCH CHIA THƯỚC ĐO TỐC ĐỘ */
         .speed-control-group {
             display: flex;
@@ -743,9 +2443,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             line-height: 1;
         }
 
-        /* ==========================================================
-           TỐI ƯU HÓA CHO ĐIỆN THOẠI DI ĐỘNG (MOBILE OPTIMIZATIONS)
-           ========================================================== */
+        /* TỐI ƯU HÓA CHO ĐIỆN THOẠI DI ĐỘNG (MOBILE OPTIMIZATIONS) */
         @media (max-width: 520px) {
             body {
                 padding: 10px 10px calc(76px + env(safe-area-inset-bottom, 0px)) 10px;
@@ -996,9 +2694,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             }
         }
 
-        /* ==========================================================
-           GIAO DIỆN MÁY TÍNH / PC / LAPTOP (DESKTOP SIDEBAR & WORKSPACE >= 769px)
-           ========================================================== */
+        /* GIAO DIỆN MÁY TÍNH / PC / LAPTOP (DESKTOP SIDEBAR & WORKSPACE >= 769px) */
         @media (min-width: 769px) {
             body {
                 padding: 0;
@@ -1484,10 +3180,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                                 <i class="fa-solid fa-hand"></i> DỪNG KHẨN CẤP
                             </button>
                         </div>
-
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
@@ -1508,18 +3202,17 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 
     <!-- JAVASCRIPT LOGIC CLIENT -->
     <script>
-        // ==========================================================
+
         // PHẢN HỒI RUNG (HAPTIC FEEDBACK CHO ĐIỆN THOẠI)
-        // ==========================================================
+
         function triggerHaptic(duration = 20) {
             if ("vibrate" in navigator) {
                 try { navigator.vibrate(duration); } catch (e) { }
             }
         }
 
-        // ==========================================================
         // CHUYỂN ĐỔI TAB: TRANG CHỦ <-> ĐIỀU KHIỂN
-        // ==========================================================
+
         function switchTab(tab) {
             triggerHaptic(15);
             const secHome = document.getElementById("sectionHome");
@@ -1554,9 +3247,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             }
         }
 
-        // ==========================================================
         // CẤU HÌNH & TRẠNG THÁI: TỐC ĐỘ + LÁI TRÁI / PHẢI
-        // ==========================================================
+
         let isSteerActive = false;
         let isSpeedActive = false;
         let isHttpBusy = false;
@@ -1584,9 +3276,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         let steerRafId = null;
         let speedRafId = null;
 
-        // ==========================================================
         // KHỞI TẠO CẦN GẠT TỐC ĐỘ CHUNG (0 - 100%)
-        // ==========================================================
+
         function initSpeedSlider() {
             speedTrack = document.getElementById("speedTrack");
             speedHandle = document.getElementById("speedHandle");
@@ -1680,9 +3371,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             calculateAndDispatchMotors();
         }
 
-        // ==========================================================
         // KHỞI TẠO CẦN LÁI TRÁI - PHẢI (THANH TRƯỢT NGANG)
-        // ==========================================================
+
         function initSteering() {
             steerTrack = document.getElementById("steerTrack");
             steerHandle = document.getElementById("steerHandle");
@@ -1826,9 +3516,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             }
         }
 
-        // ==========================================================
         // TÍNH TOÁN CÔNG SUẤT ĐỘNG CƠ: TỐC ĐỘ + VI SAI LÁI TRÁI/PHẢI
-        // ==========================================================
+
         function calculateAndDispatchMotors() {
             if (masterSpeed === 0) {
                 targetLeft = 0;
@@ -1875,9 +3564,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             }
         }
 
-        // ==========================================================
         // CƠ CHẾ GỬI LỆNH KHÔNG NGHẼN (PIPELINED DISPATCHER)
-        // ==========================================================
+
         function queueMotor(left, right) {
             nextCommand = { left: left, right: right, type: 'MOTOR' };
             dispatchNextCommand();
@@ -1937,9 +3625,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                 });
         }
 
-        // ==========================================================
         // HÀM GỬI LỆNH ĐỘC LẬP (NÚT BẤM)
-        // ==========================================================
+
         function command(cmd) {
             fetch("/command?cmd=" + encodeURIComponent(cmd), { cache: "no-store" })
                 .catch(function (err) { console.error("Lỗi gửi lệnh:", err); });
@@ -2004,9 +3691,8 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             command("FEED|1");
         }
 
-        // ==========================================================
         // ĐIỀU KHIỂN BẰNG BÀN PHÍM TRÊN MÁY TÍNH (PC / LAPTOP)
-        // ==========================================================
+
         const keysPressed = {};
 
         window.addEventListener("keydown", function (e) {
@@ -2084,17 +3770,15 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
             }
         }
 
-        // ==========================================================
         // TỰ ĐỘNG CẬP NHẬT KHI XOAY MÀN HÌNH HOẶC RESIZE CỬA SỔ
-        // ==========================================================
+
         window.addEventListener("resize", function () {
             updateSpeedVisual(masterSpeed, false);
             updateSteerVisual(steerNormX, false);
         });
 
-        // ==========================================================
         // LẤY DỮ LIỆU TELEMETRY ĐỊNH KỲ (THÔNG MINH, KHÔNG TRANH CHẤP KHI LÁI)
-        // ==========================================================
+
         function updateTelemetry() {
             // QUAN TRỌNG: Nếu người dùng đang kéo cần tốc độ hoặc lái, tạm ngưng polling
             // để dành 100% băng thông Wi-Fi và CPU cho lệnh động cơ, loại bỏ hoàn toàn lag!
@@ -2184,8 +3868,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         });
     </script>
 </body>
-
 </html>
-)rawliteral";
 
-#endif
+================================================================================

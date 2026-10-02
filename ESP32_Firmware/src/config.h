@@ -11,5 +11,4 @@
 
 // Tốc độ truyền dữ liệu
 #define UART_BAUDRATE 115200
-
-#endif // CONFIG_H
+#endif
