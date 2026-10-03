@@ -1,5 +1,5 @@
-#include "tim.h"   // Thu vien dieu khien TIMER
-#include "../../Application/Inc/motor.h" // Goi thu vien motor
+#include "tim.h"   
+#include "../../Application/Inc/motor.h"
 
 // Hàm khởi tạo 2 động cơ
 void motor_init(void)

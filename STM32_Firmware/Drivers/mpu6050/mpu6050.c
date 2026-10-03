@@ -3,6 +3,7 @@
 #define MPU6050_DATA 0x3B
 
 #include "mpu6050.h"
+#include "../../Application/Inc/esp32_comm.h"
 extern I2C_HandleTypeDef hi2c1;
 
 HAL_StatusTypeDef MPU6050_Init(void) {
@@ -38,33 +39,25 @@ void MPU6050_ReadRaw(MPU6050_Data_t *data) {
     data->Gx = data->GyroX / 131.0f;
     data->Gy = data->GyroY / 131.0f;
     data->Gz = data->GyroZ / 131.0f;
-  } else if (status == HAL_ERROR) {
+  } else {
+    // Nếu status là HAL_ERROR, HAL_TIMEOUT, hoặc HAL_BUSY
     uint32_t err_code = HAL_I2C_GetError(&hi2c1);
-    uint8_t value_err = 0;
-    if (err_code == HAL_I2C_ERROR_AF) { // Lỗi sai địa chỉ hoặc hỏng dây, NACK
-      value_err = 1;
-    } else if (err_code == HAL_I2C_ERROR_BERR) { // Do nhiễu đường truyền hoặc
-                                                 // thiếu điện trở kéo lên
-      value_err = 2;
-    } else if (err_code == HAL_I2C_ERROR_ARLO) { // Tranh chấp Bus
-      value_err = 3;
+
+    static uint32_t last_mpu_err_tick = 0;
+    if (HAL_GetTick() - last_mpu_err_tick > 1000) {
+      last_mpu_err_tick = HAL_GetTick();
+      if (status == HAL_TIMEOUT) {
+        ESP32Comm_SendError("I2C_MPU_TIMEOUT");
+      } else if (err_code == HAL_I2C_ERROR_AF) {
+        ESP32Comm_SendError("I2C_MPU_NACK");
+      } else if (err_code == HAL_I2C_ERROR_BERR) {
+        ESP32Comm_SendError("I2C_MPU_BERR");
+      } else if (err_code == HAL_I2C_ERROR_ARLO) {
+        ESP32Comm_SendError("I2C_MPU_ARLO");
+      } else {
+        ESP32Comm_SendError("I2C_MPU_UNKNOWN");
+      }
     }
-
-    data->AccX = value_err;
-    data->AccY = value_err;
-    data->AccZ = value_err;
-    data->GyroX = value_err;
-    data->GyroY = value_err;
-    data->GyroZ = value_err;
-
-    float value_err_f = (float)value_err;
-
-    data->Ax = value_err_f;
-    data->Ay = value_err_f;
-    data->Az = value_err_f;
-    data->Gx = value_err_f;
-    data->Gy = value_err_f;
-    data->Gz = value_err_f;
 
     HAL_I2C_DeInit(&hi2c1);
     HAL_I2C_Init(&hi2c1);

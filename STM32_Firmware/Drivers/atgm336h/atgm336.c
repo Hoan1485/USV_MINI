@@ -1,11 +1,14 @@
 #include "atgm336.h"
 #include <string.h>
 #include <stdlib.h>
+#include "../../Application/Inc/esp32_comm.h"
 
 #define ATGM336H_BUFFER_SIZE 128
 
 static char rx_buffer[ATGM336H_BUFFER_SIZE];
 static uint16_t rx_index = 0;
+
+static uint32_t last_err_tick = 0;
 
 void ATGM336H_Init(ATGM336H_Data_t *gps_data) {
     memset(gps_data, 0, sizeof(ATGM336H_Data_t));
@@ -22,6 +25,23 @@ static float NMEA_To_Decimal(float nmea_coord, char direction) {
         decimal = -decimal;
     }
     return decimal;
+}
+
+// Kiểm tra mã Checksum của chuỗi NMEA
+static uint8_t ATGM336H_VerifyChecksum(const char *sentence) {
+    if (sentence[0] != '$') return 0;
+    uint8_t checksum = 0;
+    int i = 1;
+    while (sentence[i] != '*' && sentence[i] != '\0') {
+        checksum ^= sentence[i];
+        i++;
+    }
+    if (sentence[i] == '*') {
+        // Chuyển 2 ký tự Hex sau dấu * thành số
+        int received_checksum = (int)strtol(&sentence[i + 1], NULL, 16);
+        return (checksum == received_checksum);
+    }
+    return 0;
 }
 
 // Parses a complete NMEA sentence
@@ -44,7 +64,7 @@ static uint8_t ATGM336H_ParseSentence(char *sentence, ATGM336H_Data_t *gps_data)
     if (field_count == 0) return 0;
     
     // Check if it's an RMC sentence (Recommended Minimum Specific GNSS Data)
-    if (strncmp(fields[0], "$GNRMC", 6) == 0 || strncmp(fields[0], "$GPRMC", 6) == 0) {
+    if (strstr(fields[0], "RMC") != NULL) {
         if (field_count > 9) {
             // Field 2: Status (A = Active, V = Void)
             if (fields[2][0] == 'A') gps_data->valid = 1;
@@ -74,7 +94,7 @@ static uint8_t ATGM336H_ParseSentence(char *sentence, ATGM336H_Data_t *gps_data)
         }
     }
     // Check if it's a GGA sentence (Global Positioning System Fix Data)
-    else if (strncmp(fields[0], "$GNGGA", 6) == 0 || strncmp(fields[0], "$GPGGA", 6) == 0) {
+    else if (strstr(fields[0], "GGA") != NULL) {
         if (field_count > 9) {
             // Field 6: Fix quality
             if (strlen(fields[6]) > 0) {
@@ -106,6 +126,15 @@ uint8_t ATGM336H_ProcessChar(char c, ATGM336H_Data_t *gps_data) {
         if (c == '\n') { // End of sentence
             rx_buffer[rx_index] = '\0'; // Null-terminate
             
+            if (!ATGM336H_VerifyChecksum(rx_buffer)) {
+                if (HAL_GetTick() - last_err_tick > 2000) {
+                    last_err_tick = HAL_GetTick();
+                    ESP32Comm_SendError("GPS_CHECKSUM_ERR");
+                }
+                rx_index = 0;
+                return 0;
+            }
+
             // Temporary buffer because parsing modifies the string
             char temp_buffer[ATGM336H_BUFFER_SIZE];
             strcpy(temp_buffer, rx_buffer);
@@ -116,6 +145,10 @@ uint8_t ATGM336H_ProcessChar(char c, ATGM336H_Data_t *gps_data) {
         }
     } else if (rx_index >= ATGM336H_BUFFER_SIZE - 1) {
         // Buffer overflow, reset
+        if (HAL_GetTick() - last_err_tick > 2000) {
+            last_err_tick = HAL_GetTick();
+            ESP32Comm_SendError("GPS_OVERFLOW");
+        }
         rx_index = 0;
     }
     return 0;

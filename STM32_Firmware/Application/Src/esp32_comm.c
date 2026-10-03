@@ -29,7 +29,6 @@ static uint16_t s_rx_index = 0;
 static char s_pending_cmd[RX_BUFFER_SIZE];
 static volatile bool s_cmd_ready = false;
 
-/* Biến toàn cục trạng thái USV */
 USV_State_t g_usv_state;
 
 /* ============================================================
@@ -39,7 +38,6 @@ USV_State_t g_usv_state;
 void ESP32Comm_Init(UART_HandleTypeDef *huart) {
   s_esp32_huart = huart;
 
-  /* Khởi tạo dữ liệu mặc định */
   memset(&g_usv_state, 0, sizeof(USV_State_t));
   g_usv_state.mode = USV_MODE_MANUAL;
   g_usv_state.auto_running = false;
@@ -48,12 +46,10 @@ void ESP32Comm_Init(UART_HandleTypeDef *huart) {
   g_usv_state.gps_valid = false;
   g_usv_state.waypoint_valid = false;
 
-  /* Khởi động PWM cho 2 kênh ESC trên TIM4 */
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); // Trái (PB6)
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2); // Phải (PB7)
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1); 
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2); 
   Motor_Stop();
 
-  /* Bắt đầu nhận ký tự đầu tiên từ USART3 qua ngắt */
   if (s_esp32_huart != NULL) {
     HAL_UART_Receive_IT(s_esp32_huart, &s_rx_byte, 1);
   }
@@ -74,7 +70,6 @@ void ESP32Comm_RxCallback(char c) {
     if (s_rx_index > 0) {
       s_rx_buffer[s_rx_index] = '\0';
 
-      /* Chép sang pending buffer nếu chưa bị chiếm */
       if (!s_cmd_ready) {
         strncpy(s_pending_cmd, s_rx_buffer, RX_BUFFER_SIZE);
         s_pending_cmd[RX_BUFFER_SIZE - 1] = '\0';
@@ -86,15 +81,24 @@ void ESP32Comm_RxCallback(char c) {
     if (s_rx_index < RX_BUFFER_SIZE - 1) {
       s_rx_buffer[s_rx_index++] = c;
     } else {
-      /* Tràn bộ đệm */
       s_rx_index = 0;
       ESP32Comm_SendError("BUFFER_OVERFLOW");
     }
   }
 
-  /* Kích hoạt lại ngắt nhận byte tiếp theo */
   if (s_esp32_huart != NULL) {
     HAL_UART_Receive_IT(s_esp32_huart, &s_rx_byte, 1);
+  }
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
+  if (huart->Instance == USART2) {
+    HAL_UART_AbortReceive_IT(huart);
+    HAL_UART_Receive_IT(huart, &s_rx_byte, 1);
+  } else if (huart->Instance == USART1) { 
+    extern uint8_t gps_rx_data;
+    HAL_UART_AbortReceive_IT(huart);
+    HAL_UART_Receive_IT(huart, &gps_rx_data, 1);
   }
 }
 
@@ -103,7 +107,6 @@ void ESP32Comm_RxCallback(char c) {
    ============================================================ */
 
 void Motor_ApplyPWM(int8_t left, int8_t right) {
-  /* Giới hạn dải -100 đến 100 */
   if (left < -100)
     left = -100;
   if (left > 100)
@@ -117,12 +120,21 @@ void Motor_ApplyPWM(int8_t left, int8_t right) {
   g_usv_state.motor_right = right;
 
   /*
-   * TIM4 Prescaler 83 (Clock = 1MHz -> 1 tick = 1us), Period = 19999 (20ms =
-   * 50Hz) RC ESC chuẩn: 1000 us: Lùi tối đa (hoặc 0 ga với ESC 1 chiều) 1500
-   * us: Trung điểm dừng (Neutral) 2000 us: Tiến tối đa
+   * GIỚI HẠN TỐC ĐỘ TEST TRÊN CẠN (50%)
+   * Joystick đẩy max 100% nhưng phần cứng chỉ xuất PWM tối đa 50% sức mạnh
    */
-  uint32_t pulse_left = (uint32_t)(1500 + ((int32_t)left * 5));
-  uint32_t pulse_right = (uint32_t)(1500 + ((int32_t)right * 5));
+  int32_t safe_left = ((int32_t)left * 50) / 100;
+  int32_t safe_right = ((int32_t)right * 50) / 100;
+
+  /*
+   * TIM4 Prescaler 83 (Clock = 1MHz -> 1 tick = 1us), Period = 19999 (20ms = 50Hz)
+   * RC ESC chuẩn: 
+   * 1000 us: Lùi tối đa
+   * 1500 us: Trung điểm dừng (Neutral) 
+   * 2000 us: Tiến tối đa
+   */
+  uint32_t pulse_left = (uint32_t)(1500 + (safe_left * 5));
+  uint32_t pulse_right = (uint32_t)(1500 + (safe_right * 5));
 
   __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, pulse_left);
   __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_2, pulse_right);
@@ -223,12 +235,10 @@ static void parse_feed(char *frame) {
     return;
   }
 
-  /* 1 vòng quay của 28BYJ-48 (4076 bước, mỗi bước 2ms) mất khoảng 8152ms */
   g_usv_state.feed_time_ms = (uint32_t)(revs * 8152);
   g_usv_state.feed_active = true;
   g_usv_state.feed_start_tick = HAL_GetTick();
 
-  /* Kích hoạt động cơ bước quay nhả mồi theo số vòng */
   rotate_stepper((float)revs * 360.0f, 1);
 
   if (g_usv_state.feed_percent >= 5) {
@@ -243,7 +253,6 @@ static void parse_feed(char *frame) {
    ============================================================ */
 
 void ESP32Comm_Process(void) {
-  /* Kiểm tra và xử lý lệnh mới từ ESP32 */
   if (s_cmd_ready) {
     char cmd[RX_BUFFER_SIZE];
     strncpy(cmd, s_pending_cmd, RX_BUFFER_SIZE);
@@ -252,6 +261,8 @@ void ESP32Comm_Process(void) {
 
     if (strcmp(cmd, "STOP") == 0) {
       Motor_Stop();
+      stepper_stop();
+      g_usv_state.feed_active = false;
     } else if (strcmp(cmd, "AUTO_START") == 0) {
       if (!g_usv_state.gps_valid) {
         ESP32Comm_SendError("GPS_INVALID");
@@ -278,7 +289,6 @@ void ESP32Comm_Process(void) {
     }
   }
 
-  /* Kiểm tra hết thời gian rải thức ăn */
   if (g_usv_state.feed_active) {
     if (HAL_GetTick() - g_usv_state.feed_start_tick >=
         g_usv_state.feed_time_ms) {
@@ -306,9 +316,7 @@ void ESP32Comm_SendStatus(void) {
                      g_usv_state.gps_valid ? 1 : 0);
 
   if (len > 0) {
-    // Gửi cho ESP32 qua s_esp32_huart (UART2)
     HAL_UART_Transmit(s_esp32_huart, (uint8_t *)tx_buf, (uint16_t)len, 100);
-    // "Nghe lén" - Gửi bản sao y hệt ra máy tính qua huart3 (UART3)
     HAL_UART_Transmit(&huart3, (uint8_t *)tx_buf, (uint16_t)len, 100);
   }
 }
@@ -318,11 +326,9 @@ void ESP32Comm_SendError(const char *err_code) {
     return;
 
   char tx_buf[64];
-  int len = snprintf(tx_buf, sizeof(tx_buf), "ERROR|%s\n", err_code);
+  int len = snprintf(tx_buf, sizeof(tx_buf), "ERROR|%s\r\n", err_code);
   if (len > 0) {
-    // Gửi lỗi cho ESP32 qua s_esp32_huart (UART2)
     HAL_UART_Transmit(s_esp32_huart, (uint8_t *)tx_buf, (uint16_t)len, 50);
-    // "Nghe lén" - Gửi bản sao lỗi ra máy tính qua huart3 (UART3)
     HAL_UART_Transmit(&huart3, (uint8_t *)tx_buf, (uint16_t)len, 50);
   }
 }

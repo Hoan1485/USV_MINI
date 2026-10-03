@@ -3,7 +3,7 @@
 #include <math.h>
 
 #define PI 3.14159265358979323846
-#define EARTH_RADIUS 6371000.0 // Tính bằng mét
+#define EARTH_RADIUS 6371000.0 
 
 float deg_to_rad(float do_goc) { return do_goc * (PI / 180.0); }
 
@@ -32,29 +32,26 @@ float calculate_bearing(float lat1, float lon1, float lat2, float lon2) {
 
   angle = rad_to_deg(angle);
   if (angle < 0) {
-    angle += 360.0; // Đảm bảo góc luôn dương
+    angle += 360.0; 
   }
   return angle;
 }
 
 // Hàm tính toán độ bẻ lái để giữ hướng bằng thuật toán PID
 float update_pid(PID_Controller *pid, float target, float current, float dt) {
-  // Tính sai số giữa mục tiêu và hiện tại
   float error = target - current;
 
-  // Xử lý góc bị lật (-180 đến 180) để tàu chọn hướng quay ngắn nhất
   if (error > 180.0f)
     error -= 360.0f;
   if (error < -180.0f)
     error += 360.0f;
 
-  pid->integral += error * dt;                       // Tích phân
-  float derivative = (error - pid->prev_error) / dt; // Đạo hàm
+  pid->integral += error * dt;                       
+  float derivative = (error - pid->prev_error) / dt; 
 
-  // Công thức PID kinh điển
   float result =
       (pid->kp * error) + (pid->ki * pid->integral) + (pid->kd * derivative);
-  pid->prev_error = error; // Lưu lại sai số cho lần sau
+  pid->prev_error = error; 
 
   return result;
 }
@@ -65,32 +62,26 @@ extern PID_Controller heading_pid;
 void auto_control_boat(float current_lat, float current_lon,
                        float current_heading, float target_lat,
                        float target_lon) {
-  // 1. Tính xem còn cách đích bao xa
   float distance =
       calculate_distance(current_lat, current_lon, target_lat, target_lon);
 
   if (distance < 2.0) {
-    // Đã đến nơi (Sai số dưới 2 mét)
-    motor_set_speed(1500, 1500); // Dừng lại
+    motor_set_speed(1500, 1500); 
     return;
   }
 
-  // 2. Tính xem cần quay mặt về hướng nào
   float target_heading =
       calculate_bearing(current_lat, current_lon, target_lat, target_lon);
 
-  // 3. Tính toán lực bẻ lái cần thiết để quay mũi tàu đúng hướng
   float steering_force =
       update_pid(&heading_pid, target_heading, current_heading,
-                 0.1); // Thời gian 1 chu kỳ là 0.1 giây (10Hz)
+                 0.1); 
 
-  // 4. Pha trộn lực bẻ lái vào tốc độ tiến tới
-  int base_speed = 1650; // Tốc độ chạy thẳng (1500 là dừng, >1500 là tới)
+  int base_speed = 1650; 
 
   int left_speed = base_speed + (int)steering_force;
   int right_speed = base_speed - (int)steering_force;
 
-  // 5. Giới hạn tốc độ trong mức an toàn của tín hiệu PWM (1100 đến 1900)
   if (left_speed > 1900)
     left_speed = 1900;
   if (left_speed < 1100)
@@ -100,6 +91,5 @@ void auto_control_boat(float current_lat, float current_lon,
   if (right_speed < 1100)
     right_speed = 1100;
 
-  // 6. Gửi tín hiệu xuống động cơ
   motor_set_speed(left_speed, right_speed);
 }

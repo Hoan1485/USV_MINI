@@ -12,5 +12,6 @@ void step_motor(uint8_t step);
 void rotate_stepper(float angle, uint8_t direction);
 void drop_bait(uint32_t duration_ms);
 void stepper_update(void);
+void stepper_stop(void);
 
 #endif

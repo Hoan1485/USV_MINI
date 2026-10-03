@@ -15,15 +15,15 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "ATGM336H/atgm336.h"
+#include "DS18B20/ds18b20.h"
+#include "INA219/ina219.h"
+#include "MPU6050/mpu6050.h"
 #include "QM5883P.h"
-#include "atgm336h/atgm336.h"
-#include "ds18b20/ds18b20.h"
 #include "esp32_comm.h"
-#include "mpu6050/mpu6050.h"
 #include "stepper.h"
 #include <math.h>
 #include <stdio.h>
-
 
 /* USER CODE END Includes */
 
@@ -92,7 +92,6 @@ int main(void) {
   MX_USART3_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  /* MPU6050 và QMC5883P init must be after I2C init and SystemClock_Config */
   printf("Starting I2C Sensors...\r\n");
 
   if (MPU6050_Init() == HAL_OK) {
@@ -107,8 +106,14 @@ int main(void) {
     printf("QMC5883P Init FAILED\r\n");
   }
 
+  if (INA219_Init(&hi2c1) == HAL_OK) {
+    printf("INA219 Init SUCCESS\r\n");
+  } else {
+    printf("INA219 Init FAILED\r\n");
+  }
+
   DS18B20_Init();
-  DS18B20_Request_Temp(); // Bắt đầu quá trình đo nhiệt độ đầu tiên
+  DS18B20_Request_Temp();
 
   extern void MX_Stepper_GPIO_Init(void);
   MX_Stepper_GPIO_Init();
@@ -123,6 +128,7 @@ int main(void) {
   /* USER CODE BEGIN WHILE */
   uint32_t last_status_tick = 0;
   uint32_t last_temp_req = 0;
+  uint32_t last_ina_req = 0;
 
   while (1) {
     /* USER CODE END WHILE */
@@ -131,40 +137,39 @@ int main(void) {
     MPU6050_Data_t imu = {0};
     QMC5883P_Data_t mag = {0};
 
-    /* 1. Đọc dữ liệu cảm biến */
     MPU6050_ReadRaw(&imu);
     QMC5883P_ReadRaw(&mag);
 
-    /* 2. Tính góc hướng la bàn (Heading) từ QMC5883P */
     float heading = atan2f(mag.My, mag.Mx) * 180.0f / 3.14159265f;
     if (heading < 0.0f) {
       heading += 360.0f;
     }
     g_usv_state.heading = heading;
 
-    /* 3. Cập nhật nhiệt độ nước từ DS18B20 (mỗi 750ms) */
     if (HAL_GetTick() - last_temp_req >= 750) {
       last_temp_req = HAL_GetTick();
       g_usv_state.water_temp = DS18B20_Read_Temp();
       DS18B20_Request_Temp();
     }
 
-    /* 4. Cập nhật dữ liệu GPS */
+    if (HAL_GetTick() - last_ina_req >= 200) {
+      last_ina_req = HAL_GetTick();
+      INA219_ReadBusVoltage_V(&hi2c1, &g_usv_state.battery_volt);
+      INA219_ReadCurrent_A(&hi2c1, &g_usv_state.current_amp);
+    }
+
     g_usv_state.current_lat = gps_data.latitude;
     g_usv_state.current_lon = gps_data.longitude;
-    g_usv_state.speed = gps_data.speed_kph / 3.6f; /* m/s */
+    g_usv_state.speed = gps_data.speed_kph / 3.6f;
     g_usv_state.gps_valid = (gps_data.valid != 0);
 
-    /* 5. Xử lý lệnh nhận được từ ESP32 */
     ESP32Comm_Process();
 
-    /* 6. Định kỳ 500ms gửi STATUS lên ESP32 Web Dashboard */
     if (HAL_GetTick() - last_status_tick >= 500) {
       last_status_tick = HAL_GetTick();
       ESP32Comm_SendStatus();
     }
 
-    /* 7. Cập nhật động cơ bước liên tục (non-blocking) */
     stepper_update();
   }
   /* USER CODE END 3 */
@@ -214,6 +219,18 @@ void SystemClock_Config(void) {
 }
 
 /* USER CODE BEGIN 4 */
+// Hàm in lỗi ra Data Console ở STM32
+#ifdef __GNUC__
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif
+
+PUTCHAR_PROTOTYPE {
+  ITM_SendChar(ch);
+  return ch;
+}
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   if (huart->Instance == USART1) {
     ATGM336H_ProcessChar((char)gps_rx_data, &gps_data);
